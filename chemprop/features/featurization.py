@@ -154,6 +154,10 @@ class MolGraph:
         # Convert smiles to molecule
         mol = Chem.MolFromSmiles(smiles)
 
+        # Add explicit Hs
+        if args.explicit_Hs:
+            mol = Chem.AddHs(mol)
+
         # fake the number of "atoms" if we are collapsing substructures
         self.n_atoms = mol.GetNumAtoms()
         

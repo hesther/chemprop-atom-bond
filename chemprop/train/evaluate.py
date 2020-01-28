@@ -2,6 +2,8 @@ import logging
 from typing import Callable, List
 
 import torch.nn as nn
+import numpy as np
+from sklearn.metrics import mean_absolute_error
 
 from .predict import predict
 from chemprop.data import MoleculeDataset, StandardScaler
@@ -29,6 +31,12 @@ def evaluate_predictions(preds: List[List[float]],
     if len(preds) == 0:
         return [float('nan')] * num_tasks
 
+    targets = np.concatenate([x[0] for x in targets]).reshape([-1, 1])
+    preds = np.array(preds)
+
+    results = mean_absolute_error(targets, preds)
+    # FIXME turn off for dev
+    '''
     # Filter out empty targets
     # valid_preds and valid_targets have shape (num_tasks, data_size)
     valid_preds = [[] for _ in range(num_tasks)]
@@ -38,7 +46,10 @@ def evaluate_predictions(preds: List[List[float]],
             if targets[j][i] is not None:  # Skip those without targets
                 valid_preds[i].append(preds[j][i])
                 valid_targets[i].append(targets[j][i])
+    '''
 
+    # FIXME turn off for dev
+    '''
     # Compute metric
     results = []
     for i in range(num_tasks):
@@ -64,6 +75,8 @@ def evaluate_predictions(preds: List[List[float]],
         else:
             results.append(metric_func(valid_targets[i], valid_preds[i]))
 
+    return results
+    '''
     return results
 
 

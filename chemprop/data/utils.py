@@ -9,6 +9,7 @@ import os
 from rdkit import Chem
 import numpy as np
 from tqdm import tqdm
+import pandas as pd
 
 from .data import MoleculeDatapoint, MoleculeDataset
 from .scaffold import log_scaffold_stats, scaffold_split
@@ -126,30 +127,20 @@ def get_data(path: str,
     skip_smiles = set()
 
     # Load data
-    with open(path) as f:
-        reader = csv.reader(f)
-        next(reader)  # skip header
+    data = pd.read_pickle(path)
+    data = data[~data.smiles.isin(skip_smiles)]
 
-        lines = []
-        for line in reader:
-            smiles = line[0]
+    if len(data) > max_data_size:
+        data = data.iloc[:max_data_size]
 
-            if smiles in skip_smiles:
-                continue
-
-            lines.append(line)
-
-            if len(lines) >= max_data_size:
-                break
-
-        data = MoleculeDataset([
-            MoleculeDatapoint(
-                line=line,
-                args=args,
-                features=features_data[i] if features_data is not None else None,
-                use_compound_names=use_compound_names
-            ) for i, line in tqdm(enumerate(lines), total=len(lines))
-        ])
+    data = MoleculeDataset([
+        MoleculeDatapoint(
+            line=line,
+            args=args,
+            features=features_data[i] if features_data is not None else None,
+            use_compound_names=use_compound_names
+        ) for i, line in tqdm(data.iterrows())
+    ])
 
     # Filter out invalid SMILES
     if skip_invalid_smiles:

@@ -45,7 +45,11 @@ def run_training(args: Namespace, logger: Logger = None) -> List[float]:
 
     # Get data
     debug('Loading data')
-    args.task_names = get_task_names(args.data_path)
+
+    # FIXME
+    # args.task_names = get_task_names(args.data_path)
+    args.task_names = 'test'
+
     data = get_data(path=args.data_path, args=args, logger=logger)
     args.num_tasks = data.num_tasks()
     args.features_size = data.features_size()
@@ -119,14 +123,16 @@ def run_training(args: Namespace, logger: Logger = None) -> List[float]:
           f'train size = {len(train_data):,} | val size = {len(val_data):,} | test size = {len(test_data):,}')
 
     # Initialize scaler and scale training targets by subtracting mean and dividing standard deviation (regression only)
-    if args.dataset_type == 'regression':
-        debug('Fitting scaler')
-        train_smiles, train_targets = train_data.smiles(), train_data.targets()
-        scaler = StandardScaler().fit(train_targets)
-        scaled_targets = scaler.transform(train_targets).tolist()
-        train_data.set_targets(scaled_targets)
-    else:
-        scaler = None
+    #FIXME turn off for atomic prediction development
+    #if args.dataset_type == 'regression':
+    #    debug('Fitting scaler')
+    #    train_smiles, train_targets = train_data.smiles(), train_data.targets()
+    #    scaler = StandardScaler().fit(train_targets)
+    #    scaled_targets = scaler.transform(train_targets).tolist()
+    #    train_data.set_targets(scaled_targets)
+    #else:
+    #    scaler = None
+    scaler = None
 
     # Get loss and metric functions
     loss_func = get_loss_func(args)
@@ -202,8 +208,12 @@ def run_training(args: Namespace, logger: Logger = None) -> List[float]:
             )
 
             # Average validation score
+            # FIXME
+            '''
             avg_val_score = np.nanmean(val_scores)
             debug(f'Validation {args.metric} = {avg_val_score:.6f}')
+            '''
+            avg_val_score = val_scores
             writer.add_scalar(f'validation_{args.metric}', avg_val_score, n_iter)
 
             if args.show_individual_scores:
@@ -237,11 +247,17 @@ def run_training(args: Namespace, logger: Logger = None) -> List[float]:
             logger=logger
         )
 
+        # FIXME
+        '''
         if len(test_preds) != 0:
             sum_test_preds += np.array(test_preds)
 
         # Average test score
         avg_test_score = np.nanmean(test_scores)
+        '''
+
+        avg_test_score = test_scores
+
         info(f'Model {model_idx} test {args.metric} = {avg_test_score:.6f}')
         writer.add_scalar(f'test_{args.metric}', avg_test_score, 0)
 
@@ -252,6 +268,8 @@ def run_training(args: Namespace, logger: Logger = None) -> List[float]:
                 writer.add_scalar(f'test_{task_name}_{args.metric}', test_score, n_iter)
 
     # Evaluate ensemble on test set
+    # FIXME
+    '''
     avg_test_preds = (sum_test_preds / args.ensemble_size).tolist()
 
     ensemble_scores = evaluate_predictions(
@@ -272,5 +290,6 @@ def run_training(args: Namespace, logger: Logger = None) -> List[float]:
     if args.show_individual_scores:
         for task_name, ensemble_score in zip(args.task_names, ensemble_scores):
             info(f'Ensemble test {task_name} {args.metric} = {ensemble_score:.6f}')
+    '''
 
-    return ensemble_scores
+    return avg_test_score

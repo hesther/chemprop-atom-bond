@@ -2,6 +2,8 @@ from argparse import Namespace
 import logging
 from typing import Callable, List, Union
 
+import numpy as np
+
 from tensorboardX import SummaryWriter
 import torch
 import torch.nn as nn
@@ -56,8 +58,10 @@ def train(model: nn.Module,
         smiles_batch, features_batch, target_batch = mol_batch.smiles(), mol_batch.features(), mol_batch.targets()
         batch = smiles_batch
         mask = torch.Tensor([[x is not None for x in tb] for tb in target_batch])
-        targets = torch.Tensor([[0 if x is None else x for x in tb] for tb in target_batch])
 
+        # FIXME assign 0 to None in target
+        # targets = [[0 if x is None else x for x in tb] for tb in target_batch]
+        targets = np.concatenate([x[0] for x in target_batch])
         if next(model.parameters()).is_cuda:
             mask, targets = mask.cuda(), targets.cuda()
 
@@ -69,13 +73,18 @@ def train(model: nn.Module,
         # Run model
         model.zero_grad()
         preds = model(batch, features_batch)
+        targets = torch.Tensor(targets.reshape([-1, 1]))
 
+        #FIXME mutlticlass
+        '''
         if args.dataset_type == 'multiclass':
             targets = targets.long()
             loss = torch.cat([loss_func(preds[:, target_index, :], targets[:, target_index]).unsqueeze(1) for target_index in range(preds.size(1))], dim=1) * class_weights * mask
         else:
             loss = loss_func(preds, targets) * class_weights * mask
-        loss = loss.sum() / mask.sum()
+        '''
+        loss = loss_func(preds, targets)
+        loss = loss.sum() / targets.shape[0]
 
         loss_sum += loss.item()
         iter_count += len(mol_batch)

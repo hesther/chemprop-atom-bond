@@ -85,15 +85,18 @@ class MoleculeModel(nn.Module):
         :param input: Input.
         :return: The output of the MoleculeModel.
         """
-        output = self.ffn(self.encoder(*input))
+        hidden = self.encoder(*input)
+        output = self.ffn(hidden)
 
         # Don't apply sigmoid during training b/c using BCEWithLogitsLoss
         if self.classification and not self.training:
             output = self.sigmoid(output)
         if self.multiclass:
-            output = output.reshape((output.size(0), -1, self.num_classes)) # batch size x num targets x num classes per target
+            output = output.reshape(
+                (output.size(0), -1, self.num_classes))  # batch size x num targets x num classes per target
             if not self.training:
-                output = self.multiclass_softmax(output) # to get probabilities during evaluation, but not during training as we're using CrossEntropyLoss
+                output = self.multiclass_softmax(
+                    output)  # to get probabilities during evaluation, but not during training as we're using CrossEntropyLoss
 
         return output
 
@@ -110,7 +113,8 @@ def build_model(args: Namespace) -> nn.Module:
     if args.dataset_type == 'multiclass':
         args.output_size *= args.multiclass_num_classes
 
-    model = MoleculeModel(classification=args.dataset_type == 'classification', multiclass=args.dataset_type == 'multiclass')
+    model = MoleculeModel(classification=args.dataset_type == 'classification',
+                          multiclass=args.dataset_type == 'multiclass')
     model.create_encoder(args)
     model.create_ffn(args)
 

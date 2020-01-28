@@ -79,7 +79,7 @@ def add_train_args(parser: ArgumentParser):
                              '(walks directory and ensembles all models that are found)')
     parser.add_argument('--checkpoint_path', type=str, default=None,
                         help='Path to model checkpoint (.pt file)')
-    parser.add_argument('--dataset_type', type=str,
+    parser.add_argument('--dataset_type', type=str, default='regression',
                         choices=['classification', 'regression', 'multiclass'],
                         help='Type of dataset, e.g. classification or regression.'
                              'This determines the loss function used during training.')
@@ -175,6 +175,8 @@ def add_train_args(parser: ArgumentParser):
                         help='Number of layers in FFN after MPN encoding')
     parser.add_argument('--atom_messages', action='store_true', default=False,
                         help='Use messages on atoms instead of messages on bonds')
+    parser.add_argument('--explicit_Hs', action='store_true', default=False,
+                        help='Use explicit H atoms in the model')
 
 
 def update_checkpoint_args(args: Namespace):
@@ -248,9 +250,9 @@ def modify_train_args(args: Namespace):
             config = json.load(f)
             for key, value in config.items():
                 setattr(args, key, value)
-
-    assert args.data_path is not None
-    assert args.dataset_type is not None
+    #FIXME
+    #assert args.data_path is not None
+    #assert args.dataset_type is not None
 
     if args.save_dir is not None:
         makedirs(args.save_dir)
@@ -272,10 +274,13 @@ def modify_train_args(args: Namespace):
         else:
             args.metric = 'rmse'
 
+    #FIXME
+    '''
     if not ((args.dataset_type == 'classification' and args.metric in ['auc', 'prc-auc', 'accuracy']) or
             (args.dataset_type == 'regression' and args.metric in ['rmse', 'mae', 'mse', 'r2']) or
             (args.dataset_type == 'multiclass' and args.metric in ['cross_entropy', 'accuracy'])):
         raise ValueError(f'Metric "{args.metric}" invalid for dataset type "{args.dataset_type}".')
+    '''
 
     args.minimize_score = args.metric in ['rmse', 'mae', 'mse', 'cross_entropy']
 

@@ -125,27 +125,28 @@ class MPNEncoder(nn.Module):
         atom_hiddens = self.act_func(self.W_o(a_input))  # num_atoms x hidden
         atom_hiddens = self.dropout_layer(atom_hiddens)  # num_atoms x hidden
 
+        #FIXME
         # Readout
-        mol_vecs = []
-        for i, (a_start, a_size) in enumerate(a_scope):
-            if a_size == 0:
-                mol_vecs.append(self.cached_zero_vector)
-            else:
-                cur_hiddens = atom_hiddens.narrow(0, a_start, a_size)
-                mol_vec = cur_hiddens  # (num_atoms, hidden_size)
+        #mol_vecs = []
+        #for i, (a_start, a_size) in enumerate(a_scope):
+        #    if a_size == 0:
+        #        mol_vecs.append(self.cached_zero_vector)
+        #    else:
+        #        cur_hiddens = atom_hiddens.narrow(0, a_start, a_size)
+        #        mol_vec = cur_hiddens  # (num_atoms, hidden_size)
 
-                mol_vec = mol_vec.sum(dim=0) / a_size
-                mol_vecs.append(mol_vec)
+        #       mol_vec = mol_vec.sum(dim=0) / a_size
+        #        mol_vecs.append(mol_vec)
 
-        mol_vecs = torch.stack(mol_vecs, dim=0)  # (num_molecules, hidden_size)
+        #mol_vecs = torch.stack(mol_vecs, dim=0)  # (num_molecules, hidden_size)
         
-        if self.use_input_features:
-            features_batch = features_batch.to(mol_vecs)
-            if len(features_batch.shape) == 1:
-                features_batch = features_batch.view([1,features_batch.shape[0]])
-            mol_vecs = torch.cat([mol_vecs, features_batch], dim=1)  # (num_molecules, hidden_size)
+        #if self.use_input_features:
+        #    features_batch = features_batch.to(mol_vecs)
+        #    if len(features_batch.shape) == 1:
+        #        features_batch = features_batch.view([1,features_batch.shape[0]])
+        #    mol_vecs = torch.cat([mol_vecs, features_batch], dim=1)  # (num_molecules, hidden_size)
 
-        return mol_vecs  # num_molecules x hidden
+        return atom_hiddens[1:]  # num_atoms x hidden, remove the first one which is zero padding
 
 
 class MPN(nn.Module):
