@@ -70,7 +70,7 @@ def add_train_args(parser: ArgumentParser):
                         help='Method of generating additional features')
     parser.add_argument('--features_path', type=str, nargs='*',
                         help='Path to features to use in FNN (instead of features_generator)')                   
-    parser.add_argument('--save_dir', type=str, default=None,
+    parser.add_argument('--save_dir', type=str, default='log',
                         help='Directory where model checkpoints will be saved')
     parser.add_argument('--save_smiles_splits', action='store_true', default=False,
                         help='Save smiles for each train/val/test splits for prediction convenience later')
@@ -272,9 +272,10 @@ def modify_train_args(args: Namespace):
         elif args.dataset_type == 'multiclass':
             args.metric = 'cross_entropy'
         else:
-            args.metric = 'rmse'
+            # FIXME
+            args.metric = 'mae'
 
-    #FIXME
+    # FIXME
     '''
     if not ((args.dataset_type == 'classification' and args.metric in ['auc', 'prc-auc', 'accuracy']) or
             (args.dataset_type == 'regression' and args.metric in ['rmse', 'mae', 'mse', 'r2']) or

@@ -85,7 +85,6 @@ def train(model: nn.Module,
             loss = loss_func(preds, targets) * class_weights * mask
         '''
         loss = loss_func(preds, targets)
-        loss = loss.sum() / targets.shape[0]
 
         loss_sum += loss.item()
         iter_count += len(mol_batch)
