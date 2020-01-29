@@ -26,6 +26,7 @@ def predict(model: nn.Module,
     preds = []
 
     num_iters, iter_step = len(data), batch_size
+    smiles_batch = []
 
     for i in trange(0, num_iters, iter_step):
         # Prepare batch
@@ -47,5 +48,6 @@ def predict(model: nn.Module,
         # Collect vectors
         batch_preds = batch_preds.tolist()
         preds.extend(batch_preds)
+        smiles_batch.extend(smiles_batch)
 
     return preds, smiles_batch
