@@ -91,7 +91,10 @@ def train(model: nn.Module,
         loss_sum += loss.item()
         iter_count += len(mol_batch)
 
-        metric = metric_func(preds.data.numpy(), targets.data.numpy())
+        if args.cuda:
+            metric = metric_func(preds.data.cpu.numpy(), targets.data.cpu.numpy())
+        else:
+            metric = metric_func(preds.data.numpy(), targets.data.numpy())
 
         loss.backward()
         optimizer.step()
