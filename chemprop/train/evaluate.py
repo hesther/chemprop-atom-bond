@@ -101,7 +101,7 @@ def evaluate(model: nn.Module,
     :param logger: Logger.
     :return: A list with the score for each task based on `metric_func`.
     """
-    preds = predict(
+    preds, _ = predict(
         model=model,
         data=data,
         batch_size=batch_size,

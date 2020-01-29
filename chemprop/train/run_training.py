@@ -234,7 +234,7 @@ def run_training(args: Namespace, logger: Logger = None) -> List[float]:
         info(f'Model {model_idx} best validation {args.metric} = {best_score:.6f} on epoch {best_epoch}')
         model = load_checkpoint(os.path.join(save_dir, 'model.pt'), cuda=args.cuda, logger=logger)
         
-        test_preds = predict(
+        test_preds, test_smiles_batch = predict(
             model=model,
             data=test_data,
             batch_size=args.batch_size,
@@ -294,4 +294,4 @@ def run_training(args: Namespace, logger: Logger = None) -> List[float]:
             info(f'Ensemble test {task_name} {args.metric} = {ensemble_score:.6f}')
     '''
 
-    return avg_test_score
+    return avg_test_score, test_preds, test_smiles_batch
