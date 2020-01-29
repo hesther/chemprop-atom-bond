@@ -61,7 +61,7 @@ def train(model: nn.Module,
 
         # FIXME assign 0 to None in target
         # targets = [[0 if x is None else x for x in tb] for tb in target_batch]
-        targets = np.concatenate([x[0] for x in target_batch])
+        targets = torch.Tensor(np.concatenate([x[0] for x in target_batch]))
         if next(model.parameters()).is_cuda:
         #   mask, targets = mask.cuda(), targets.cuda()
             targets = targets.cuda()
@@ -74,7 +74,7 @@ def train(model: nn.Module,
         # Run model
         model.zero_grad()
         preds = model(batch, features_batch)
-        targets = torch.Tensor(targets.reshape([-1, 1]))
+        targets = targets.reshape([-1, 1])
 
         #FIXME mutlticlass
         '''
