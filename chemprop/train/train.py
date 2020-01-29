@@ -89,7 +89,7 @@ def train(model: nn.Module,
         loss = loss.sum() / targets.shape[0]
 
         loss_sum += loss.item()
-        iter_count += len(mol_batch)
+        iter_count += 1
 
         if args.cuda:
             metric = metric_func(preds.data.cpu().numpy(), targets.data.cpu().numpy())
