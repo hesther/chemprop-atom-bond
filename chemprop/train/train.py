@@ -45,7 +45,7 @@ def train(model: nn.Module,
     
     data.shuffle()
 
-    loss_sum, iter_count = 0, 0
+    loss_sum, metric_sum, iter_count = 0, 0, 0
 
     num_iters = len(data) // args.batch_size * args.batch_size  # don't use the last batch if it's small, for stability
 
@@ -96,6 +96,8 @@ def train(model: nn.Module,
         else:
             metric = metric_func(preds.data.numpy(), targets.data.numpy())
 
+        metric_sum += metric
+
         loss.backward()
         optimizer.step()
 
@@ -112,8 +114,10 @@ def train(model: nn.Module,
             loss_avg = loss_sum / iter_count
             loss_sum, iter_count = 0, 0
 
+            metric_avg = metric_sum / iter_count
+
             lrs_str = ', '.join(f'lr_{i} = {lr:.4e}' for i, lr in enumerate(lrs))
-            debug(f'Loss = {loss_avg:.4e}, metric = {metric:.4e}, PNorm = {pnorm:.4f}, GNorm = {gnorm:.4f}, {lrs_str}')
+            debug(f'Loss = {loss_avg:.4e}, metric = {metric_avg:.4e}, PNorm = {pnorm:.4f}, GNorm = {gnorm:.4f}, {lrs_str}')
 
             if writer is not None:
                 writer.add_scalar('train_loss', loss_avg, n_iter)
