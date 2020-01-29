@@ -92,7 +92,7 @@ def train(model: nn.Module,
         iter_count += len(mol_batch)
 
         if args.cuda:
-            metric = metric_func(preds.data.cpu.numpy(), targets.data.cpu.numpy())
+            metric = metric_func(preds.data.cpu().numpy(), targets.data.cpu().numpy())
         else:
             metric = metric_func(preds.data.numpy(), targets.data.numpy())
 
