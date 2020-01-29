@@ -187,6 +187,7 @@ def run_training(args: Namespace, logger: Logger = None) -> List[float]:
                 model=model,
                 data=train_data,
                 loss_func=loss_func,
+                metric_func=metric_func,
                 optimizer=optimizer,
                 scheduler=scheduler,
                 args=args,

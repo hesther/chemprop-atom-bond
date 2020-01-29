@@ -18,6 +18,7 @@ from chemprop.nn_utils import compute_gnorm, compute_pnorm, NoamLR
 def train(model: nn.Module,
           data: Union[MoleculeDataset, List[MoleculeDataset]],
           loss_func: Callable,
+          metric_func: Callable,
           optimizer: Optimizer,
           scheduler: _LRScheduler,
           args: Namespace,
@@ -85,9 +86,12 @@ def train(model: nn.Module,
             loss = loss_func(preds, targets) * class_weights * mask
         '''
         loss = loss_func(preds, targets)
+        loss = loss.sum() / targets.shape[0]
 
         loss_sum += loss.item()
         iter_count += len(mol_batch)
+
+        metric = metric_func(preds.data.numpy(), targets.data.numpy())
 
         loss.backward()
         optimizer.step()
@@ -106,7 +110,7 @@ def train(model: nn.Module,
             loss_sum, iter_count = 0, 0
 
             lrs_str = ', '.join(f'lr_{i} = {lr:.4e}' for i, lr in enumerate(lrs))
-            debug(f'Loss = {loss_avg:.4e}, PNorm = {pnorm:.4f}, GNorm = {gnorm:.4f}, {lrs_str}')
+            debug(f'Loss = {loss_avg:.4e}, metric = {metric:.4e}, PNorm = {pnorm:.4f}, GNorm = {gnorm:.4f}, {lrs_str}')
 
             if writer is not None:
                 writer.add_scalar('train_loss', loss_avg, n_iter)
