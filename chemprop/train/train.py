@@ -63,7 +63,8 @@ def train(model: nn.Module,
         # targets = [[0 if x is None else x for x in tb] for tb in target_batch]
         targets = np.concatenate([x[0] for x in target_batch])
         if next(model.parameters()).is_cuda:
-            mask, targets = mask.cuda(), targets.cuda()
+        #   mask, targets = mask.cuda(), targets.cuda()
+            targets = targets.cuda()
 
         class_weights = torch.ones(targets.shape)
 
