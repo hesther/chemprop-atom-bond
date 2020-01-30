@@ -111,11 +111,13 @@ class MoleculeModel(nn.Module):
                     cur_weights = weights.narrow(0, a_start, a_size)
                     cur_output = output.narrow(0, a_start, a_size)
 
-                    cur_weights_softmax = nn.functional.softmax(cur_weights, dim=0)
+                    #cur_weights_softmax = nn.functional.softmax(cur_weights, dim=0)
+                    cur_weights_softmax = cur_weights
                     cur_weights_softmax_cur_output_sum = (cur_weights_softmax * cur_output).sum()
+                    cur_weights_sum = cur_weights_softmax.sum()
 
                     cur_output = -cur_weights_softmax * cur_output + \
-                                 cur_weights_softmax * cur_weights_softmax_cur_output_sum
+                                 (cur_weights_softmax * cur_weights_softmax_cur_output_sum)/cur_weights_sum
 
                     constrained_output.append(cur_output)
 
