@@ -1,5 +1,6 @@
 from argparse import Namespace
 
+import torch
 import torch.nn as nn
 
 from .mpn import MPN
@@ -33,26 +34,13 @@ class MoleculeModel(nn.Module):
         """
         self.encoder = MPN(args)
 
-    def create_ffn(self, args: Namespace):
+    def _create_ffn(self, first_linear_dim: int, dropout: nn.Module, activation, args: Namespace) -> nn.Sequential:
         """
-        Creates the feed-forward network for the model.
-
-        :param args: Arguments.
+        Create FFN layers
+        :param dropout:
+        :param args:
+        :return:
         """
-        self.multiclass = args.dataset_type == 'multiclass'
-        if self.multiclass:
-            self.num_classes = args.multiclass_num_classes
-        if args.features_only:
-            first_linear_dim = args.features_size
-        else:
-            first_linear_dim = args.hidden_size
-            if args.use_input_features:
-                first_linear_dim += args.features_dim
-
-        dropout = nn.Dropout(args.dropout)
-        activation = get_activation_function(args.activation)
-
-        # Create FFN layers
         if args.ffn_num_layers == 1:
             ffn = [
                 dropout,
@@ -75,8 +63,32 @@ class MoleculeModel(nn.Module):
                 nn.Linear(args.ffn_hidden_size, args.output_size),
             ])
 
+            return nn.Sequential(*ffn)
+
+    def create_ffn(self, args: Namespace):
+        """
+        Creates the feed-forward network for the model.
+
+        :param args: Arguments.
+        """
+        self.multiclass = args.dataset_type == 'multiclass'
+        if self.multiclass:
+            self.num_classes = args.multiclass_num_classes
+        if args.features_only:
+            first_linear_dim = args.features_size
+        else:
+            first_linear_dim = args.hidden_size
+            if args.use_input_features:
+                first_linear_dim += args.features_dim
+
+        dropout = nn.Dropout(args.dropout)
+        activation = get_activation_function(args.activation)
+
         # Create FFN model
-        self.ffn = nn.Sequential(*ffn)
+        self.ffn = self._create_ffn(first_linear_dim, dropout, activation, args)
+        if args.target_constraints is not None:
+            self.weights_readout = self._create_ffn(first_linear_dim, dropout, activation, args)
+            self.target_constraints = args.target_constraints
 
     def forward(self, *input):
         """
@@ -85,8 +97,29 @@ class MoleculeModel(nn.Module):
         :param input: Input.
         :return: The output of the MoleculeModel.
         """
-        hidden = self.encoder(*input)
+        hidden, a_scope = self.encoder(*input)
         output = self.ffn(hidden)
+
+        if self.target_constraints is not None:
+            weights = self.weights_readout(hidden)
+
+            constrained_output = []
+            for i, (a_start, a_size) in enumerate(a_scope):
+                if a_size == 0:
+                    continue
+                else:
+                    cur_weights = weights.narrow(0, a_start, a_size)
+                    cur_output = output.narrow(0, a_start, a_size)
+
+                    cur_weights_softmax = nn.functional.softmax(cur_weights, dim=0)
+                    cur_weights_softmax_cur_output_sum = (cur_weights_softmax * cur_output).sum()
+
+                    cur_output = -cur_weights_softmax * cur_output + \
+                                 cur_weights_softmax * cur_weights_softmax_cur_output_sum
+
+                    constrained_output.append(cur_output)
+
+            output = torch.cat(constrained_output, dim=0)  # (num_molecules, hidden_size)
 
         # Don't apply sigmoid during training b/c using BCEWithLogitsLoss
         if self.classification and not self.training:
@@ -99,7 +132,6 @@ class MoleculeModel(nn.Module):
                     output)  # to get probabilities during evaluation, but not during training as we're using CrossEntropyLoss
 
         return output
-
 
 def build_model(args: Namespace) -> nn.Module:
     """

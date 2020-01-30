@@ -146,7 +146,7 @@ class MPNEncoder(nn.Module):
         #        features_batch = features_batch.view([1,features_batch.shape[0]])
         #    mol_vecs = torch.cat([mol_vecs, features_batch], dim=1)  # (num_molecules, hidden_size)
 
-        return atom_hiddens[1:]  # num_atoms x hidden, remove the first one which is zero padding
+        return atom_hiddens, a_scope  # num_atoms x hidden, remove the first one which is zero padding
 
 
 class MPN(nn.Module):
