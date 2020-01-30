@@ -152,7 +152,7 @@ def add_train_args(parser: ArgumentParser):
                         help='Final learning rate')
     parser.add_argument('--no_features_scaling', action='store_true', default=False,
                         help='Turn off scaling of features')
-    parser.add_argument('--target', type=float, default='hirshfeld_charge',
+    parser.add_argument('--target', type=str, default='hirshfeld_charge',
                         help='training target')
 
     # Model arguments
