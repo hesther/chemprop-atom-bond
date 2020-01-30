@@ -278,7 +278,7 @@ class SinexpLR(_LRScheduler):
         for i in range(self.num_lrs):
             if self.current_step <= self.total_steps[i]:
                 self.lr[i] = self.init_lr[i] * (self.exponential_gamma[i] ** self.current_step) * \
-                             np.sin(np.pi * self.current_step / (2 * self.period_l[i]))
+                             np.absolute(np.sin(np.pi * self.current_step / (2 * self.period_l[i])))
             else:  # theoretically this case should never be reached since training should stop at total_steps
                 self.lr[i] = self.final_lr[i]
 
