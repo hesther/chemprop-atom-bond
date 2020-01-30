@@ -12,7 +12,7 @@ from torch.optim.lr_scheduler import _LRScheduler
 from tqdm import trange
 
 from chemprop.data import MoleculeDataset
-from chemprop.nn_utils import compute_gnorm, compute_pnorm, NoamLR
+from chemprop.nn_utils import compute_gnorm, compute_pnorm, NoamLR, SinexpLR
 
 
 def train(model: nn.Module,
@@ -101,7 +101,7 @@ def train(model: nn.Module,
         loss.backward()
         optimizer.step()
 
-        if isinstance(scheduler, NoamLR):
+        if isinstance(scheduler, NoamLR) or isinstance(scheduler, SinexpLR):
             scheduler.step()
 
         n_iter += len(mol_batch)
