@@ -88,10 +88,11 @@ class MoleculeModel(nn.Module):
         # Create FFN model
         self.ffn = self._create_ffn(first_linear_dim, args.ffn_hidden_size,
                                     args.ffn_num_layers, args.output_size, dropout, activation)
-        if args.target_constraints is not None:
+        self.constraints = args.constraints
+        if args.constraints is not None:
             self.weights_readout = self._create_ffn(first_linear_dim, args.ffn_hidden_size,
                                                     args.ffn_num_layers, args.output_size, dropout, activation)
-            self.target_constraints = args.target_constraints
+            self.constraints = args.constraints
 
     def forward(self, *input):
         """
@@ -103,7 +104,7 @@ class MoleculeModel(nn.Module):
         hidden, a_scope = self.encoder(*input)
         output = self.ffn(hidden)
 
-        if self.target_constraints is not None:
+        if self.constraints is not None:
             weights = self.weights_readout(hidden)
 
             constrained_output = []
@@ -122,7 +123,7 @@ class MoleculeModel(nn.Module):
 
                     #cur_output = cur_weights_softmax * cur_output - \
                     #             (cur_weights_softmax * cur_weights_softmax_cur_output_sum)/cur_weights_sum
-                    cur_output = cur_output - cur_weights_softmax*cur_output_sum/cur_weights_sum
+                    cur_output = cur_output + cur_weights_softmax*(self.constraints-cur_output_sum)/cur_weights_sum
 
                     constrained_output.append(cur_output)
 
