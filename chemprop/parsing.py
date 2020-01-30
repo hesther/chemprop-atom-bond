@@ -146,7 +146,7 @@ def add_train_args(parser: ArgumentParser):
                              'from max_lr to final_lr.')
     parser.add_argument('--init_lr', type=float, default=1e-4,
                         help='Initial learning rate')
-    parser.add_argument('--max_lr', type=float, default=1e-3,
+    parser.add_argument('--max_lr', type=float, default=1e-2,
                         help='Maximum learning rate')
     parser.add_argument('--final_lr', type=float, default=1e-4,
                         help='Final learning rate')

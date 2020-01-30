@@ -175,7 +175,7 @@ def run_training(args: Namespace, logger: Logger = None) -> List[float]:
         optimizer = build_optimizer(model, args)
 
         # Learning rate schedulers
-        scheduler = build_lr_scheduler(optimizer, args)
+        scheduler = build_lr_scheduler(optimizer, args, scheduler_name='Sinexp')
 
         # Run training
         best_score = float('inf') if args.minimize_score else -float('inf')
