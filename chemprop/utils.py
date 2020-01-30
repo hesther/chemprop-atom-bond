@@ -13,7 +13,7 @@ from torch.optim.lr_scheduler import _LRScheduler
 
 from chemprop.data import StandardScaler
 from chemprop.models import build_model, MoleculeModel
-from chemprop.nn_utils import NoamLR
+from chemprop.nn_utils import NoamLR, SinexpLR
 
 
 def makedirs(path: str, isfile: bool = False):
@@ -269,7 +269,8 @@ def build_optimizer(model: nn.Module, args: Namespace) -> Optimizer:
     return Adam(params)
 
 
-def build_lr_scheduler(optimizer: Optimizer, args: Namespace, total_epochs: List[int] = None) -> _LRScheduler:
+def build_lr_scheduler(optimizer: Optimizer, args: Namespace,
+                       total_epochs: List[int] = None, scheduler_name: str='Noam') -> _LRScheduler:
     """
     Builds a learning rate scheduler.
 
@@ -279,15 +280,25 @@ def build_lr_scheduler(optimizer: Optimizer, args: Namespace, total_epochs: List
     :return: An initialized learning rate scheduler.
     """
     # Learning rate scheduler
-    return NoamLR(
-        optimizer=optimizer,
-        warmup_epochs=[args.warmup_epochs],
-        total_epochs=total_epochs or [args.epochs] * args.num_lrs,
-        steps_per_epoch=args.train_data_size // args.batch_size,
-        init_lr=[args.init_lr],
-        max_lr=[args.max_lr],
-        final_lr=[args.final_lr]
-    )
+    if scheduler_name == 'Noam':
+        return NoamLR(
+            optimizer=optimizer,
+            warmup_epochs=[args.warmup_epochs],
+            total_epochs=total_epochs or [args.epochs] * args.num_lrs,
+            steps_per_epoch=args.train_data_size // args.batch_size,
+            init_lr=[args.init_lr],
+            max_lr=[args.max_lr],
+            final_lr=[args.final_lr]
+        )
+    elif scheduler_name == 'Sinexp':
+        return SinexpLR(
+            optimizer=optimizer,
+            warmup_epochs=[args.warmup_epochs],
+            total_epochs=total_epochs or [args.epochs] * args.num_lrs,
+            steps_per_epoch=args.train_data_size // args.batch_size,
+            init_lr=[args.max_lr],
+            final_lr=[args.final_lr]
+        )
 
 
 def create_logger(name: str, save_dir: str = None, quiet: bool = False) -> logging.Logger:

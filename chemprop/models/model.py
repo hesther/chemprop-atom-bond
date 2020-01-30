@@ -34,33 +34,34 @@ class MoleculeModel(nn.Module):
         """
         self.encoder = MPN(args)
 
-    def _create_ffn(self, first_linear_dim: int, dropout: nn.Module, activation, args: Namespace) -> nn.Sequential:
+    def _create_ffn(self, first_linear_dim: int, ffn_hidden_size: int, ffn_num_layers: int,
+                    output_size: int, dropout: nn.Module, activation) -> nn.Sequential:
         """
         Create FFN layers
         :param dropout:
         :param args:
         :return:
         """
-        if args.ffn_num_layers == 1:
+        if ffn_num_layers == 1:
             ffn = [
                 dropout,
-                nn.Linear(first_linear_dim, args.output_size)
+                nn.Linear(first_linear_dim, output_size)
             ]
         else:
             ffn = [
                 dropout,
-                nn.Linear(first_linear_dim, args.ffn_hidden_size)
+                nn.Linear(first_linear_dim, ffn_hidden_size)
             ]
-            for _ in range(args.ffn_num_layers - 2):
+            for _ in range(ffn_num_layers - 2):
                 ffn.extend([
                     activation,
                     dropout,
-                    nn.Linear(args.ffn_hidden_size, args.ffn_hidden_size),
+                    nn.Linear(ffn_hidden_size, ffn_hidden_size),
                 ])
             ffn.extend([
                 activation,
                 dropout,
-                nn.Linear(args.ffn_hidden_size, args.output_size),
+                nn.Linear(ffn_hidden_size, output_size),
             ])
 
             return nn.Sequential(*ffn)
@@ -85,9 +86,11 @@ class MoleculeModel(nn.Module):
         activation = get_activation_function(args.activation)
 
         # Create FFN model
-        self.ffn = self._create_ffn(first_linear_dim, dropout, activation, args)
+        self.ffn = self._create_ffn(first_linear_dim, args.ffn_hidden_size,
+                                    args.ffn_num_layers, args.output_size, dropout, activation)
         if args.target_constraints is not None:
-            self.weights_readout = self._create_ffn(first_linear_dim, dropout, activation, args)
+            self.weights_readout = self._create_ffn(first_linear_dim, args.ffn_hidden_size,
+                                                    args.ffn_num_layers, args.output_size, dropout, activation)
             self.target_constraints = args.target_constraints
 
     def forward(self, *input):
@@ -115,9 +118,11 @@ class MoleculeModel(nn.Module):
                     cur_weights_softmax = cur_weights
                     cur_weights_softmax_cur_output_sum = (cur_weights_softmax * cur_output).sum()
                     cur_weights_sum = cur_weights_softmax.sum()
+                    cur_output_sum = cur_output.sum()
 
-                    cur_output = -cur_weights_softmax * cur_output + \
-                                 (cur_weights_softmax * cur_weights_softmax_cur_output_sum)/cur_weights_sum
+                    #cur_output = cur_weights_softmax * cur_output - \
+                    #             (cur_weights_softmax * cur_weights_softmax_cur_output_sum)/cur_weights_sum
+                    cur_output = cur_output - cur_weights_softmax*cur_output_sum/cur_weights_sum
 
                     constrained_output.append(cur_output)
 
