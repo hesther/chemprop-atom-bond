@@ -65,7 +65,7 @@ class MoleculeDatapoint:
 
         line = line.drop('smiles')
         # Create targets
-        self.targets = [line['hirshfeld_charges']]
+        self.targets = [line[args.target]]
 
     def set_features(self, features: np.ndarray):
         """
