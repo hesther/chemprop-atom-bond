@@ -31,10 +31,9 @@ def evaluate_predictions(preds: List[List[float]],
     if len(preds) == 0:
         return [float('nan')] * num_tasks
 
-    targets = np.concatenate([x[0] for x in targets]).reshape([-1, 1])
-    preds = np.array(preds)
+    targets = [np.concatenate(x).reshape([-1, 1]) for x in zip(*targets)]
 
-    results = mean_absolute_error(targets, preds)
+    results = [mean_absolute_error(target, pred) for target,pred in zip(targets, preds)]
     # FIXME turn off for dev
     '''
     # Filter out empty targets

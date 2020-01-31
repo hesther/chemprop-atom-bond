@@ -45,7 +45,7 @@ def train(model: nn.Module,
     
     data.shuffle()
 
-    loss_sum, metric_sum, iter_count = 0, 0, 0
+    loss_sum, metric_sum, iter_count = [0]*len(args.targets), [0]*len(args.targets), 0
 
     num_iters = len(data) // args.batch_size * args.batch_size  # don't use the last batch if it's small, for stability
 
@@ -62,20 +62,21 @@ def train(model: nn.Module,
 
         # FIXME assign 0 to None in target
         # targets = [[0 if x is None else x for x in tb] for tb in target_batch]
-        targets = torch.Tensor(np.concatenate([x[0] for x in target_batch]))
+        targets = [torch.Tensor(np.concatenate(x)) for x in zip(*target_batch)]
         if next(model.parameters()).is_cuda:
         #   mask, targets = mask.cuda(), targets.cuda()
             targets = targets.cuda()
 
-        class_weights = torch.ones(targets.shape)
+        # FIXME
+        #class_weights = torch.ones(targets.shape)
 
-        if args.cuda:
-            class_weights = class_weights.cuda()
+        #if args.cuda:
+        #   class_weights = class_weights.cuda()
 
         # Run model
         model.zero_grad()
         preds = model(batch, features_batch)
-        targets = targets.reshape([-1, 1])
+        targets = [x.reshape([-1, 1]) for x in targets]
 
         #FIXME mutlticlass
         '''
@@ -85,21 +86,25 @@ def train(model: nn.Module,
         else:
             loss = loss_func(preds, targets) * class_weights * mask
         '''
-        loss = loss_func(preds, targets)
-        loss = loss.sum() / targets.shape[0]
+        loss_multi_task = []
+        metric_multi_task = []
+        for target, pred in zip(targets, preds):
+            loss = loss_func(pred, target)
+            loss = loss.sum() / target.shape[0]
+            loss_multi_task.append(loss)
+            if args.cuda:
+                metric = metric_func(pred.data.cpu().numpy(), target.data.cpu().numpy())
+            else:
+                metric = metric_func(pred.data.numpy(), target.data.numpy())
+            metric_multi_task.append(metric)
 
-        loss_sum += loss.item()
+        loss_sum = [x + y for x,y in zip(loss_sum, loss_multi_task)]
         iter_count += 1
 
-        if args.cuda:
-            metric = metric_func(preds.data.cpu().numpy(), targets.data.cpu().numpy())
-        else:
-            metric = metric_func(preds.data.numpy(), targets.data.numpy())
-
-        metric_sum += metric
-
-        loss.backward()
+        sum(loss_multi_task).backward()
         optimizer.step()
+
+        metric_sum = [x + y for x,y in zip(metric_sum, metric_multi_task)]
 
         if isinstance(scheduler, NoamLR) or isinstance(scheduler, SinexpLR):
             scheduler.step()
@@ -111,15 +116,18 @@ def train(model: nn.Module,
             lrs = scheduler.get_lr()
             pnorm = compute_pnorm(model)
             gnorm = compute_gnorm(model)
-            loss_avg = loss_sum / iter_count
-            metric_avg = metric_sum / iter_count
-            loss_sum, iter_count, metric_sum = 0, 0, 0
+            loss_avg = [x / iter_count for x in loss_sum]
+            metric_avg = [x / iter_count for x in metric_sum]
+            loss_sum, iter_count, metric_sum = [0]*len(args.targets), 0, [0]*len(args.targets)
 
+            loss_str = ', '.join(f'lss_{i} = {lss:.4e}' for i, lss in enumerate(loss_avg))
+            metric_str = ', '.join(f'mc_{i} = {mc:.4e}' for i, mc in enumerate(metric_avg))
             lrs_str = ', '.join(f'lr_{i} = {lr:.4e}' for i, lr in enumerate(lrs))
-            debug(f'Loss = {loss_avg:.4e}, metric = {metric_avg:.4e}, PNorm = {pnorm:.4f}, GNorm = {gnorm:.4f}, {lrs_str}')
+            debug(f'{loss_str}, {metric_str}, PNorm = {pnorm:.4f}, GNorm = {gnorm:.4f}, {lrs_str}')
 
             if writer is not None:
-                writer.add_scalar('train_loss', loss_avg, n_iter)
+                for i, lss in enumerate(loss_avg):
+                    writer.add_scalar(f'train_loss_{i}', lss, n_iter)
                 writer.add_scalar('param_norm', pnorm, n_iter)
                 writer.add_scalar('gradient_norm', gnorm, n_iter)
                 for i, lr in enumerate(lrs):

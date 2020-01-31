@@ -65,7 +65,7 @@ class MoleculeDatapoint:
 
         line = line.drop('smiles')
         # Create targets
-        self.targets = [line[args.target]]
+        self.targets = line[args.targets].values.tolist()
 
     def set_features(self, features: np.ndarray):
         """
