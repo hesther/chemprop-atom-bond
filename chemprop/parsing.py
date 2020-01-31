@@ -150,9 +150,9 @@ def add_train_args(parser: ArgumentParser):
                              'from max_lr to final_lr.')
     parser.add_argument('--init_lr', type=float, default=1e-4,
                         help='Initial learning rate')
-    parser.add_argument('--max_lr', type=float, default=1e-2,
+    parser.add_argument('--max_lr', type=float, default=1e-3,
                         help='Maximum learning rate')
-    parser.add_argument('--final_lr', type=float, default=1e-4,
+    parser.add_argument('--final_lr', type=float, default=1e-5,
                         help='Final learning rate')
     parser.add_argument('--no_features_scaling', action='store_true', default=False,
                         help='Turn off scaling of features')
