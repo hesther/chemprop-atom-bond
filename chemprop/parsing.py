@@ -134,9 +134,9 @@ def add_train_args(parser: ArgumentParser):
     parser.add_argument('--config_path', type=str,
                         help='Path to a .json file containing arguments. Any arguments present in the config'
                              'file will override arguments specified via the command line or by the defaults.')
-    parser.add_argument('--target', type=str, default='hirshfeld_charges',
+    parser.add_argument('--targets', type=str, nargs='+', default=['hirshfeld_charges'],
                         help='training target')
-    parser.add_argument('--constraints', type=float, default=0,
+    parser.add_argument('--constraints', type=float, nargs='+', default=[0, 1],
                         help='constraints applied to model output')
 
     # Training arguments
@@ -268,9 +268,10 @@ def modify_train_args(args: Namespace):
     args.cuda = not args.no_cuda and torch.cuda.is_available()
     del args.no_cuda
 
-    args.constraints = torch.Tensor([args.constraints])
-    if args.cuda:
-        args.constraints.cuda()
+    if args.constraints is not None:
+        args.constraints = torch.Tensor(args.constraints)
+        if args.cuda:
+            args.constraints.cuda()
 
     args.features_scaling = not args.no_features_scaling
     del args.no_features_scaling

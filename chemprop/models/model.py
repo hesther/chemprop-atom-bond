@@ -86,13 +86,19 @@ class MoleculeModel(nn.Module):
         activation = get_activation_function(args.activation)
 
         # Create FFN model
-        self.ffn = self._create_ffn(first_linear_dim, args.ffn_hidden_size,
-                                    args.ffn_num_layers, args.output_size, dropout, activation)
-        self.constraints = args.constraints
-        if args.constraints is not None:
-            self.weights_readout = self._create_ffn(first_linear_dim, args.ffn_hidden_size,
-                                                    args.ffn_num_layers, args.output_size, dropout, activation)
-            self.constraints = args.constraints
+        self.ffn = []
+        self.constraints = args.constraints if args.constraints is not None else None
+        for i, target in enumerate(args.targets):
+            ffn_i = {}
+            ffn_i['ffn'] = self._create_ffn(first_linear_dim, args.ffn_hidden_size,
+                                            args.ffn_num_layers, args.output_size, dropout, activation)
+            if self.constraints is not None and i < len(self.constraints):
+                ffn_i['weights_readout'] = self._create_ffn(first_linear_dim, args.ffn_hidden_size,
+                                                            args.ffn_num_layers, args.output_size,
+                                                            dropout, activation)
+                ffn_i['constraint'] = self.constraints[i]
+
+            self.ffn.append(ffn_i)
 
     def forward(self, *input):
         """
@@ -102,32 +108,30 @@ class MoleculeModel(nn.Module):
         :return: The output of the MoleculeModel.
         """
         hidden, a_scope = self.encoder(*input)
-        output = self.ffn(hidden)
 
-        if self.constraints is not None:
-            weights = self.weights_readout(hidden)
-
+        output_all = []
+        for ffn in self.ffn:
+            output = ffn['ffn'](hidden)
             constrained_output = []
-            for i, (a_start, a_size) in enumerate(a_scope):
-                if a_size == 0:
-                    continue
-                else:
-                    cur_weights = weights.narrow(0, a_start, a_size)
-                    cur_output = output.narrow(0, a_start, a_size)
+            if 'constraint' in ffn:
+                weights = ffn['weights_readout'](hidden)
+                for i, (a_start, a_size) in enumerate(a_scope):
+                    if a_size == 0:
+                        continue
+                    else:
+                        cur_weights = weights.narrow(0, a_start, a_size)
+                        cur_output = output.narrow(0, a_start, a_size)
 
-                    #cur_weights_softmax = nn.functional.softmax(cur_weights, dim=0)
-                    cur_weights_softmax = cur_weights
-                    cur_weights_softmax_cur_output_sum = (cur_weights_softmax * cur_output).sum()
-                    cur_weights_sum = cur_weights_softmax.sum()
-                    cur_output_sum = cur_output.sum()
+                        cur_weights_sum = cur_weights.sum()
+                        cur_output_sum = cur_output.sum()
 
-                    #cur_output = cur_weights_softmax * cur_output - \
-                    #             (cur_weights_softmax * cur_weights_softmax_cur_output_sum)/cur_weights_sum
-                    cur_output = cur_output + cur_weights_softmax*(self.constraints-cur_output_sum)/cur_weights_sum
-
-                    constrained_output.append(cur_output)
-
-            output = torch.cat(constrained_output, dim=0)  # (num_molecules, hidden_size)
+                        cur_output = cur_output + cur_weights * \
+                                     (ffn['constraint'] - cur_output_sum) / cur_weights_sum
+                        constrained_output.append(cur_output)
+                cur_output = torch.cat(constrained_output, dim=0)
+            else:
+                cur_output = output[1:]
+            output_all.append(cur_output)
 
         # Don't apply sigmoid during training b/c using BCEWithLogitsLoss
         if self.classification and not self.training:
@@ -139,7 +143,7 @@ class MoleculeModel(nn.Module):
                 output = self.multiclass_softmax(
                     output)  # to get probabilities during evaluation, but not during training as we're using CrossEntropyLoss
 
-        return output
+        return output_all
 
 def build_model(args: Namespace) -> nn.Module:
     """
@@ -149,7 +153,8 @@ def build_model(args: Namespace) -> nn.Module:
     :return: A MoleculeModel containing the MPN encoder along with final linear layers with parameters initialized.
     """
     output_size = args.num_tasks
-    args.output_size = output_size
+    # FIXME
+    args.output_size = 1
     if args.dataset_type == 'multiclass':
         args.output_size *= args.multiclass_num_classes
 

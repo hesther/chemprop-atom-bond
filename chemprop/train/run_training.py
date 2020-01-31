@@ -214,9 +214,11 @@ def run_training(args: Namespace, logger: Logger = None) -> List[float]:
             avg_val_score = np.nanmean(val_scores)
             debug(f'Validation {args.metric} = {avg_val_score:.6f}')
             '''
-            avg_val_score = val_scores
-            writer.add_scalar(f'validation_{args.metric}', avg_val_score, n_iter)
-            debug(f'validation_matrix = {avg_val_score:.4e}')
+            avg_val_scores = val_scores
+            avg_val_score_str = ', '.join(f'lss_{i} = {lss:.4e}' for i, lss in enumerate(avg_val_scores))
+            for i, avg_val in enumerate(avg_val_scores):
+                writer.add_scalar(f'validation_{args.metric}_task_{i}', avg_val, n_iter)
+            debug(f'validation_matrix = {avg_val_score_str}')
 
             if args.show_individual_scores:
                 # Individual validation scores
@@ -224,6 +226,7 @@ def run_training(args: Namespace, logger: Logger = None) -> List[float]:
                     debug(f'Validation {task_name} {args.metric} = {val_score:.6f}')
                     writer.add_scalar(f'validation_{task_name}_{args.metric}', val_score, n_iter)
 
+            avg_val_score = np.mean(np.array(avg_val_scores))
             # Save model checkpoint if improved validation score
             if args.minimize_score and avg_val_score < best_score or \
                     not args.minimize_score and avg_val_score > best_score:
@@ -259,9 +262,11 @@ def run_training(args: Namespace, logger: Logger = None) -> List[float]:
         '''
 
         avg_test_score = test_scores
+        avg_test_score_str = ', '.join(f'lss_{i} = {lss:.4e}' for i, lss in enumerate(avg_test_score))
+        info(f'Model {model_idx} test {args.metric} = {avg_test_score_str}')
 
-        info(f'Model {model_idx} test {args.metric} = {avg_test_score:.6f}')
-        writer.add_scalar(f'test_{args.metric}', avg_test_score, 0)
+        for i, avg_score in enumerate(avg_test_score):
+            writer.add_scalar(f'test_{args.metric}_{i}', avg_score, 0)
 
         if args.show_individual_scores:
             # Individual test scores
