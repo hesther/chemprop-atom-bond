@@ -65,7 +65,7 @@ def train(model: nn.Module,
         targets = [torch.Tensor(np.concatenate(x)) for x in zip(*target_batch)]
         if next(model.parameters()).is_cuda:
         #   mask, targets = mask.cuda(), targets.cuda()
-            targets = targets.cuda()
+            targets = [x.cuda() for x in targets]
 
         # FIXME
         #class_weights = torch.ones(targets.shape)

@@ -136,7 +136,7 @@ def add_train_args(parser: ArgumentParser):
                              'file will override arguments specified via the command line or by the defaults.')
     parser.add_argument('--targets', type=str, nargs='+', default=['hirshfeld_charges'],
                         help='training target')
-    parser.add_argument('--constraints', type=float, nargs='+', default=[0, 1],
+    parser.add_argument('--constraints', type=float, nargs='+', default=[0, 1, -1],
                         help='constraints applied to model output')
 
     # Training arguments
