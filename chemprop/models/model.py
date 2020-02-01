@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 
 from .mpn import MPN
+from .ffn import MultiReadout
 from chemprop.nn_utils import get_activation_function, initialize_weights
 
 
@@ -34,38 +35,6 @@ class MoleculeModel(nn.Module):
         """
         self.encoder = MPN(args)
 
-    def _create_ffn(self, first_linear_dim: int, ffn_hidden_size: int, ffn_num_layers: int,
-                    output_size: int, dropout: nn.Module, activation) -> nn.Sequential:
-        """
-        Create FFN layers
-        :param dropout:
-        :param args:
-        :return:
-        """
-        if ffn_num_layers == 1:
-            ffn = [
-                dropout,
-                nn.Linear(first_linear_dim, output_size)
-            ]
-        else:
-            ffn = [
-                dropout,
-                nn.Linear(first_linear_dim, ffn_hidden_size)
-            ]
-            for _ in range(ffn_num_layers - 2):
-                ffn.extend([
-                    activation,
-                    dropout,
-                    nn.Linear(ffn_hidden_size, ffn_hidden_size),
-                ])
-            ffn.extend([
-                activation,
-                dropout,
-                nn.Linear(ffn_hidden_size, output_size),
-            ])
-
-            return nn.Sequential(*ffn)
-
     def create_ffn(self, args: Namespace):
         """
         Creates the feed-forward network for the model.
@@ -82,23 +51,8 @@ class MoleculeModel(nn.Module):
             if args.use_input_features:
                 first_linear_dim += args.features_dim
 
-        dropout = nn.Dropout(args.dropout)
-        activation = get_activation_function(args.activation)
-
-        # Create FFN model
-        self.ffn = []
-        self.constraints = args.constraints if args.constraints is not None else None
-        for i, target in enumerate(args.targets):
-            ffn_i = {}
-            ffn_i['ffn'] = self._create_ffn(first_linear_dim, args.ffn_hidden_size,
-                                            args.ffn_num_layers, args.output_size, dropout, activation)
-            if self.constraints is not None and i < len(self.constraints):
-                ffn_i['weights_readout'] = self._create_ffn(first_linear_dim, args.ffn_hidden_size,
-                                                            args.ffn_num_layers, args.output_size,
-                                                            dropout, activation)
-                ffn_i['constraint'] = self.constraints[i]
-
-            self.ffn.append(ffn_i)
+        # Create readout layer
+        self.readout = MultiReadout(args, args.targets, args.constraints)
 
     def forward(self, *input):
         """
@@ -107,31 +61,7 @@ class MoleculeModel(nn.Module):
         :param input: Input.
         :return: The output of the MoleculeModel.
         """
-        hidden, a_scope = self.encoder(*input)
-
-        output_all = []
-        for ffn in self.ffn:
-            output = ffn['ffn'](hidden)
-            constrained_output = []
-            if 'constraint' in ffn:
-                weights = ffn['weights_readout'](hidden)
-                for i, (a_start, a_size) in enumerate(a_scope):
-                    if a_size == 0:
-                        continue
-                    else:
-                        cur_weights = weights.narrow(0, a_start, a_size)
-                        cur_output = output.narrow(0, a_start, a_size)
-
-                        cur_weights_sum = cur_weights.sum()
-                        cur_output_sum = cur_output.sum()
-
-                        cur_output = cur_output + cur_weights * \
-                                     (ffn['constraint'] - cur_output_sum) / cur_weights_sum
-                        constrained_output.append(cur_output)
-                cur_output = torch.cat(constrained_output, dim=0)
-            else:
-                cur_output = output[1:]
-            output_all.append(cur_output)
+        output_all = self.readout(self.encoder(*input))
 
         # Don't apply sigmoid during training b/c using BCEWithLogitsLoss
         if self.classification and not self.training:
