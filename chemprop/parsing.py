@@ -271,7 +271,7 @@ def modify_train_args(args: Namespace):
     if args.constraints is not None:
         args.constraints = torch.Tensor(args.constraints)
         if args.cuda:
-            args.constraints.cuda()
+            args.constraints = args.constraints.cuda()
 
     args.features_scaling = not args.no_features_scaling
     del args.no_features_scaling
