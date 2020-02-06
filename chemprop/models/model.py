@@ -52,7 +52,8 @@ class MoleculeModel(nn.Module):
                 first_linear_dim += args.features_dim
 
         # Create readout layer
-        self.readout = MultiReadout(args, args.targets, args.constraints)
+        self.readout = MultiReadout(args, args.atom_targets, args.bond_targets,
+                                    args.atom_constraints, args.bond_constraints)
 
     def forward(self, *input):
         """

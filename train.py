@@ -9,7 +9,9 @@ if __name__ == '__main__':
     args = parse_train_args()
     args.batch_size = 2
     args.explicit_Hs = True
-    args.targets = ['hirshfeld_charges', 'hirshfeld_fukui_neu']
+    args.atom_targets = ['hirshfeld_charges', 'hirshfeld_fukui_neu']
+    args.atom_constraints = [0, 1]
+    args.bond_targets = ['bond_index_matrix']
     args.data_path = 'test.pickle'
     logger = create_logger(name='train', save_dir=args.save_dir, quiet=args.quiet)
     test_avg_score, test_preds, test_smiles = run_training(args, logger)

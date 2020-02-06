@@ -27,7 +27,8 @@ class MultiReadout(nn.Module):
     """A fake list of FFNs for reading out as suggested in
     https://discuss.pytorch.org/t/list-of-nn-module-in-a-nn-module/219/3 """
 
-    def __init__(self, args: Namespace, targets, constraints=None):
+    def __init__(self, args: Namespace, atom_targets, bond_targets=None,
+                 atom_constraints=None, bond_constraints=None):
         """
 
         :param args:
@@ -43,10 +44,16 @@ class MultiReadout(nn.Module):
         activation = get_activation_function(args.activation)
 
         super(MultiReadout, self).__init__()
-        for i, target in enumerate(targets):
-            constraint = constraints[i] if i < len(constraints) else None
+        for i, a_target in enumerate(atom_targets):
+            constraint = atom_constraints[i] if atom_constraints and i < len(atom_constraints) else None
             self.add_module(f'readout_{i}', FFN(features_size, hidden_size, num_layers,
-                                                output_size, dropout, activation, constraint))
+                                                output_size, dropout, activation, constraint, ffn_type='atom'))
+
+        for j, b_target in enumerate(bond_targets):
+            i += j + 1
+            constraint = bond_constraints[i] if bond_constraints and j < len(bond_constraints) else None
+            self.add_module(f'readout_{i}', FFN(features_size, hidden_size, num_layers,
+                                                output_size, dropout, activation, constraint, ffn_type='bond'))
 
         self.ffn_list = AttrProxy(self, 'readout_')
 
@@ -57,7 +64,8 @@ class MultiReadout(nn.Module):
 class FFN(nn.Module):
     """A Feedforward netowrk reading out properties from fingerprint"""
 
-    def __init__(self, features_size, hidden_size, num_layers, output_size, dropout, activation, constraint=None):
+    def __init__(self, features_size, hidden_size, num_layers, output_size,
+                 dropout, activation, constraint=None, ffn_type='atom'):
         """Initializes the FFN.
 
         args: Arguments.
@@ -67,6 +75,7 @@ class FFN(nn.Module):
         super(FFN, self).__init__()
         self.ffn = DenseLayers(features_size, hidden_size,
                                num_layers, output_size, dropout, activation)
+        self.ffn_type = ffn_type
 
         if constraint is not None:
             self.weights_readout = DenseLayers(features_size, hidden_size,
@@ -82,28 +91,41 @@ class FFN(nn.Module):
         :param input:
         :return:
         """
-        hidden, a_scope = input
+        a_hidden, a_scope, b_hidden, b_scope, b2br, bond_types = input
 
-        output = self.ffn(hidden)
-        if self.constraint is not None:
-            weights = self.weights_readout(hidden)
-            constrained_output = []
-            for i, (a_start, a_size) in enumerate(a_scope):
-                if a_size == 0:
-                    continue
-                else:
-                    cur_weights = weights.narrow(0, a_start, a_size)
-                    cur_output = output.narrow(0, a_start, a_size)
+        if self.ffn_type == 'atom':
+            hidden = a_hidden
+            scope = a_scope
 
-                    cur_weights_sum = cur_weights.sum()
-                    cur_output_sum = cur_output.sum()
+            output = self.ffn(hidden)
+            if self.constraint is not None:
+                weights = self.weights_readout(hidden)
+                constrained_output = []
+                for i, (a_start, a_size) in enumerate(scope):
+                    if a_size == 0:
+                        continue
+                    else:
+                        cur_weights = weights.narrow(0, a_start, a_size)
+                        cur_output = output.narrow(0, a_start, a_size)
 
-                    cur_output = cur_output + cur_weights * \
-                                 (self.constraint - cur_output_sum) / cur_weights_sum
-                    constrained_output.append(cur_output)
-            output = torch.cat(constrained_output, dim=0)
-        else:
-            output = output[1:]
+                        cur_weights_sum = cur_weights.sum()
+                        cur_output_sum = cur_output.sum()
+
+                        cur_output = cur_output + cur_weights * \
+                                     (self.constraint - cur_output_sum) / cur_weights_sum
+                        constrained_output.append(cur_output)
+                output = torch.cat(constrained_output, dim=0)
+            else:
+                output = output[1:]
+        elif self.ffn_type == 'bond':
+            b_hidden = b_hidden[1:]
+
+            forward_bond = b_hidden[b2br[:, 0]]
+            backward_bond = b_hidden[b2br[:, 0]]
+
+            b_hidden = forward_bond + backward_bond
+
+            output = self.ffn(b_hidden)# + bond_types.reshape(-1, 1)
 
         return output
 

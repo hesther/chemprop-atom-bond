@@ -49,6 +49,7 @@ def predict(model: nn.Module,
         # Collect vectors
         preds.append(batch_preds)
         smiles_batch_all.extend(smiles_batch)
-        preds = [np.concatenate(x) for x in zip(*preds)]
+
+    preds = [np.concatenate(x) for x in zip(*preds)]
 
     return preds, smiles_batch_all

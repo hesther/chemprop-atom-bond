@@ -134,10 +134,14 @@ def add_train_args(parser: ArgumentParser):
     parser.add_argument('--config_path', type=str,
                         help='Path to a .json file containing arguments. Any arguments present in the config'
                              'file will override arguments specified via the command line or by the defaults.')
-    parser.add_argument('--targets', type=str, nargs='+', default=['hirshfeld_charges'],
-                        help='training target')
-    parser.add_argument('--constraints', type=float, nargs='+', default=[0, 1, -1],
+    parser.add_argument('--atom_targets', type=str, nargs='+', default=['hirshfeld_charges'],
+                        help='training atom targets')
+    parser.add_argument('--atom_constraints', type=float, nargs='*', default=[0, 1, -1],
                         help='constraints applied to model output')
+    parser.add_argument('--bond_targets', type=str, nargs='*',
+                        help='training bond targets')
+    parser.add_argument('--bond_constraints', type=float, nargs='*',
+                        help='training bond constraints')
 
     # Training arguments
     parser.add_argument('--epochs', type=int, default=30,
@@ -268,10 +272,15 @@ def modify_train_args(args: Namespace):
     args.cuda = not args.no_cuda and torch.cuda.is_available()
     del args.no_cuda
 
-    if args.constraints is not None:
-        args.constraints = torch.Tensor(args.constraints)
+    if args.atom_constraints is not None:
+        args.atom_constraints = torch.Tensor(args.atom_constraints)
         if args.cuda:
-            args.constraints = args.constraints.cuda()
+            args.atom_constraints = args.atom_constraints.cuda()
+
+    if args.bond_constraints is not None:
+        args.bond_constraints = torch.Tensor(args.bond_constraints)
+        if args.cuda:
+            args.bond_constraints = args.bond_constraints.cuda()
 
     args.features_scaling = not args.no_features_scaling
     del args.no_features_scaling

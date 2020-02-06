@@ -65,7 +65,22 @@ class MoleculeDatapoint:
 
         line = line.drop('smiles')
         # Create targets
-        self.targets = line[args.targets].values.tolist()
+        # atom targets
+        self.atom_targets = line[args.atom_targets].values.tolist()
+        if args.bond_targets is not None:
+            bond_targets = []
+            for b_target_name in args.bond_targets:
+                if args.explicit_Hs:
+                    self.mol = Chem.AddHs(self.mol)
+                bond_target = line[b_target_name]
+                bond_target_arranged = []
+                for b in self.mol.GetBonds():
+                    bond_target_arranged.append(bond_target[b.GetBeginAtom().GetIdx(), b.GetEndAtom().GetIdx()])
+                bond_targets.append(bond_target_arranged)
+
+            self.bond_targets = bond_targets
+
+
 
     def set_features(self, features: np.ndarray):
         """
@@ -81,7 +96,7 @@ class MoleculeDatapoint:
 
         :return: The number of tasks.
         """
-        return len(self.targets)
+        return len(self.atom_targets) + len(self.bond_targets)
 
     def set_targets(self, targets: List[float]):
         """
@@ -149,7 +164,8 @@ class MoleculeDataset(Dataset):
 
         :return: A list of lists of floats containing the targets.
         """
-        return [d.targets for d in self.data]
+        return [d.atom_targets + d.bond_targets
+                for d in self.data]
 
     def num_tasks(self) -> int:
         """
