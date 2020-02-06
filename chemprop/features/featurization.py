@@ -3,6 +3,7 @@ from typing import List, Tuple, Union
 
 from rdkit import Chem
 import torch
+import numpy as np
 
 # Atom feature sizes
 MAX_ATOMIC_NUM = 100
@@ -149,7 +150,8 @@ class MolGraph:
         self.f_bonds = []  # mapping from bond index to concat(in_atom, bond) features
         self.a2b = []  # mapping from atom index to incoming bond indices
         self.b2a = []  # mapping from bond index to the index of the atom the bond is coming from
-        self.b2revb = []  # mapping from bond index to the index of the reverse bond
+        self.b2revb = []
+        # mapping from bond index to the index of the reverse bond
 
         # Convert smiles to molecule
         mol = Chem.MolFromSmiles(smiles)
@@ -160,7 +162,12 @@ class MolGraph:
 
         # fake the number of "atoms" if we are collapsing substructures
         self.n_atoms = mol.GetNumAtoms()
-        
+
+        # mapping from real bond index (the same as in target) to the f_bonds, since each real has two bond features,
+        # only save the index of first one, the second one should be the first_index + 1
+        self.b2br = np.zeros([len(mol.GetBonds()), 2])
+        self.bond_types = [b.GetBondTypeAsDouble() for b in mol.GetBonds()]
+
         # Get atom features
         for i, atom in enumerate(mol.GetAtoms()):
             self.f_atoms.append(atom_features(atom))
@@ -195,6 +202,7 @@ class MolGraph:
                 self.b2a.append(a2)
                 self.b2revb.append(b2)
                 self.b2revb.append(b1)
+                self.b2br[bond.GetIdx(), :] = [self.n_bonds, self.n_bonds + 1]
                 self.n_bonds += 2
 
 
@@ -233,6 +241,13 @@ class BatchMolGraph:
         a2b = [[]]  # mapping from atom index to incoming bond indices
         b2a = [0]  # mapping from bond index to the index of the atom the bond is coming from
         b2revb = [0]  # mapping from bond index to the index of the reverse bond
+        b2br = []  # mapping from f_bdons to real bonds in molecule recorded in target
+
+        #used as add-on for bond index
+        bond_types = []
+        
+        
+        # used for final add up of bond hiddens (because no unsorted_segment_sum in pytorch)
         for mol_graph in mol_graphs:
             f_atoms.extend(mol_graph.f_atoms)
             f_bonds.extend(mol_graph.f_bonds)
@@ -246,8 +261,14 @@ class BatchMolGraph:
 
             self.a_scope.append((self.n_atoms, mol_graph.n_atoms))
             self.b_scope.append((self.n_bonds, mol_graph.n_bonds))
+            b2br.append(mol_graph.b2br + self.n_bonds)
+
             self.n_atoms += mol_graph.n_atoms
             self.n_bonds += mol_graph.n_bonds
+            
+            bond_types.extend(mol_graph.bond_types)
+
+        b2br = np.concatenate(b2br, axis=0)
 
         self.max_num_bonds = max(1, max(len(in_bonds) for in_bonds in a2b)) # max with 1 to fix a crash in rare case of all single-heavy-atom mols
 
@@ -256,19 +277,23 @@ class BatchMolGraph:
         self.a2b = torch.LongTensor([a2b[a] + [0] * (self.max_num_bonds - len(a2b[a])) for a in range(self.n_atoms)])
         self.b2a = torch.LongTensor(b2a)
         self.b2revb = torch.LongTensor(b2revb)
+        self.b2br = torch.LongTensor(b2br)
+        self.bond_types = torch.FloatTensor(bond_types)
         self.b2b = None  # try to avoid computing b2b b/c O(n_atoms^3)
         self.a2a = None  # only needed if using atom messages
 
     def get_components(self) -> Tuple[torch.FloatTensor, torch.FloatTensor,
                                       torch.LongTensor, torch.LongTensor, torch.LongTensor,
-                                      List[Tuple[int, int]], List[Tuple[int, int]]]:
+                                      List[Tuple[int, int]], List[Tuple[int, int]], torch.LongTensor,
+                                      torch.FloatTensor]:
         """
         Returns the components of the BatchMolGraph.
 
         :return: A tuple containing PyTorch tensors with the atom features, bond features, and graph structure
         and two lists indicating the scope of the atoms and bonds (i.e. which molecules they belong to).
         """
-        return self.f_atoms, self.f_bonds, self.a2b, self.b2a, self.b2revb, self.a_scope, self.b_scope
+        return self.f_atoms, self.f_bonds, self.a2b, self.b2a, self.b2revb,\
+               self.a_scope, self.b_scope, self.b2br, self.bond_types
 
     def get_b2b(self) -> torch.LongTensor:
         """

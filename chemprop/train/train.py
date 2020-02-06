@@ -45,7 +45,8 @@ def train(model: nn.Module,
     
     data.shuffle()
 
-    loss_sum, metric_sum, iter_count = [0]*len(args.targets), [0]*len(args.targets), 0
+    loss_sum, metric_sum, iter_count = [0]*(len(args.atom_targets) + len(args.bond_targets)), \
+                                       [0]*(len(args.atom_targets) + len(args.bond_targets)), 0
 
     num_iters = len(data) // args.batch_size * args.batch_size  # don't use the last batch if it's small, for stability
 
@@ -58,7 +59,7 @@ def train(model: nn.Module,
         mol_batch = MoleculeDataset(data[i:i + args.batch_size])
         smiles_batch, features_batch, target_batch = mol_batch.smiles(), mol_batch.features(), mol_batch.targets()
         batch = smiles_batch
-        mask = torch.Tensor([[x is not None for x in tb] for tb in target_batch])
+        #mask = torch.Tensor([[x is not None for x in tb] for tb in target_batch])
 
         # FIXME assign 0 to None in target
         # targets = [[0 if x is None else x for x in tb] for tb in target_batch]
@@ -118,7 +119,9 @@ def train(model: nn.Module,
             gnorm = compute_gnorm(model)
             loss_avg = [x / iter_count for x in loss_sum]
             metric_avg = [x / iter_count for x in metric_sum]
-            loss_sum, iter_count, metric_sum = [0]*len(args.targets), 0, [0]*len(args.targets)
+            loss_sum, iter_count, metric_sum = [0]*(len(args.atom_targets) + len(args.bond_targets)), \
+                                               0, \
+                                               [0]*(len(args.atom_targets) + len(args.bond_targets))
 
             loss_str = ', '.join(f'lss_{i} = {lss:.4e}' for i, lss in enumerate(loss_avg))
             metric_str = ', '.join(f'mc_{i} = {mc:.4e}' for i, mc in enumerate(metric_avg))

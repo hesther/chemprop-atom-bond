@@ -57,7 +57,9 @@ class MPNEncoder(nn.Module):
         # Shared weight matrix across depths (default)
         self.W_h = nn.Linear(w_h_input_size, self.hidden_size, bias=self.bias)
 
-        self.W_o = nn.Linear(self.atom_fdim + self.hidden_size, self.hidden_size)
+        # hidden state readout
+        self.W_o_a = nn.Linear(self.atom_fdim + self.hidden_size, self.hidden_size)
+        self.W_o_b = nn.Linear(self.bond_fdim + self.hidden_size, self.hidden_size)
 
     def forward(self,
                 mol_graph: BatchMolGraph,
@@ -78,13 +80,15 @@ class MPNEncoder(nn.Module):
             if self.features_only:
                 return features_batch
 
-        f_atoms, f_bonds, a2b, b2a, b2revb, a_scope, b_scope = mol_graph.get_components()
+        f_atoms, f_bonds, a2b, b2a, b2revb, a_scope, b_scope, b2br, bond_types = mol_graph.get_components()
 
         if self.atom_messages:
             a2a = mol_graph.get_a2a()
 
         if self.args.cuda or next(self.parameters()).is_cuda:
-            f_atoms, f_bonds, a2b, b2a, b2revb = f_atoms.cuda(), f_bonds.cuda(), a2b.cuda(), b2a.cuda(), b2revb.cuda()
+            f_atoms, f_bonds, a2b, b2a, b2revb, b2br, bond_types = f_atoms.cuda(), f_bonds.cuda(), \
+                                                                   a2b.cuda(), b2a.cuda(), b2revb.cuda(), \
+                                                                   b2br.cuda(), bond_types.cuda()
 
             if self.atom_messages:
                 a2a = a2a.cuda()
@@ -118,12 +122,19 @@ class MPNEncoder(nn.Module):
             message = self.act_func(input + message)  # num_bonds x hidden_size
             message = self.dropout_layer(message)  # num_bonds x hidden
 
+        # atom hidden
         a2x = a2a if self.atom_messages else a2b
         nei_a_message = index_select_ND(message, a2x)  # num_atoms x max_num_bonds x hidden
         a_message = nei_a_message.sum(dim=1)  # num_atoms x hidden
         a_input = torch.cat([f_atoms, a_message], dim=1)  # num_atoms x (atom_fdim + hidden)
-        atom_hiddens = self.act_func(self.W_o(a_input))  # num_atoms x hidden
+        atom_hiddens = self.act_func(self.W_o_a(a_input))  # num_atoms x hidden
         atom_hiddens = self.dropout_layer(atom_hiddens)  # num_atoms x hidden
+
+        # bond hidden
+        b_input = torch.cat([f_bonds, message], dim=1)
+        bond_hiddens = self.act_func(self.W_o_b(b_input))
+        bond_hiddens = self.dropout_layer(bond_hiddens)
+
 
         #FIXME
         # Readout
@@ -146,7 +157,7 @@ class MPNEncoder(nn.Module):
         #        features_batch = features_batch.view([1,features_batch.shape[0]])
         #    mol_vecs = torch.cat([mol_vecs, features_batch], dim=1)  # (num_molecules, hidden_size)
 
-        return atom_hiddens, a_scope  # num_atoms x hidden, remove the first one which is zero padding
+        return atom_hiddens, a_scope, bond_hiddens, b_scope, b2br, bond_types  # num_atoms x hidden, remove the first one which is zero padding
 
 
 class MPN(nn.Module):
