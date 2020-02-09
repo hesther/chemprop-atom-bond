@@ -48,11 +48,9 @@ def train(model: nn.Module,
     loss_sum, metric_sum, iter_count = [0]*(len(args.atom_targets) + len(args.bond_targets)), \
                                        [0]*(len(args.atom_targets) + len(args.bond_targets)), 0
 
-    #num_iters = len(data) // args.batch_size * args.batch_size  # don't use the last batch if it's small, for stability
+    num_iters = len(data) // args.batch_size * args.batch_size  # don't use the last batch if it's small, for stability
 
     iter_size = args.batch_size
-
-    num_iters = 1
 
     for i in trange(0, num_iters, iter_size):
         # Prepare batch
