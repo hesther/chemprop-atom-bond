@@ -45,7 +45,7 @@ class MultiReadout(nn.Module):
 
         super(MultiReadout, self).__init__()
         for i, a_target in enumerate(atom_targets):
-            constraint = atom_constraints[i] if atom_constraints and i < len(atom_constraints) else None
+            constraint = atom_constraints[i] if atom_constraints is not None and i < len(atom_constraints) else None
             self.add_module(f'readout_{i}', FFN(features_size, hidden_size, num_layers,
                                                 output_size, dropout, activation, constraint, ffn_type='atom'))
 
@@ -125,7 +125,7 @@ class FFN(nn.Module):
 
             b_hidden = forward_bond + backward_bond
 
-            output = self.ffn(b_hidden)# + bond_types.reshape(-1, 1)
+            output = self.ffn(b_hidden) #+ bond_types.reshape(-1, 1)
 
         return output
 

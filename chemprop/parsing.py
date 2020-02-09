@@ -57,6 +57,8 @@ def add_train_args(parser: ArgumentParser):
                         help='Which GPU to use')
     parser.add_argument('--data_path', type=str,
                         help='Path to data CSV file')
+    parser.add_argument('--output', type=str,
+                        help='prefix for output')
     parser.add_argument('--use_compound_names', action='store_true', default=False,
                         help='Use when test data file contains compound names in addition to SMILES strings')
     parser.add_argument('--max_data_size', type=int,
@@ -154,9 +156,9 @@ def add_train_args(parser: ArgumentParser):
                              'from max_lr to final_lr.')
     parser.add_argument('--init_lr', type=float, default=1e-4,
                         help='Initial learning rate')
-    parser.add_argument('--max_lr', type=float, default=1e-3,
+    parser.add_argument('--max_lr', type=float, default=1e-2,
                         help='Maximum learning rate')
-    parser.add_argument('--final_lr', type=float, default=1e-5,
+    parser.add_argument('--final_lr', type=float, default=1e-4,
                         help='Final learning rate')
     parser.add_argument('--no_features_scaling', action='store_true', default=False,
                         help='Turn off scaling of features')
