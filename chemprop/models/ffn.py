@@ -73,8 +73,12 @@ class FFN(nn.Module):
         """
 
         super(FFN, self).__init__()
-        self.ffn = DenseLayers(features_size, hidden_size,
-                               num_layers, output_size, dropout, activation)
+        if ffn_type == 'atom':
+            self.ffn = DenseLayers(features_size, hidden_size,
+                                   num_layers, output_size, dropout, activation)
+        elif ffn_type == 'bond':
+            self.ffn = DenseLayers(2*features_size, hidden_size,
+                                   num_layers, output_size, dropout, activation)
         self.ffn_type = ffn_type
 
         if constraint is not None:
@@ -118,14 +122,13 @@ class FFN(nn.Module):
             else:
                 output = output[1:]
         elif self.ffn_type == 'bond':
-            b_hidden = b_hidden[1:]
 
             forward_bond = b_hidden[b2br[:, 0]]
-            backward_bond = b_hidden[b2br[:, 0]]
+            backward_bond = b_hidden[b2br[:, 1]]
 
-            b_hidden = forward_bond + backward_bond
+            b_hidden = torch.cat([forward_bond, backward_bond], dim=1)
 
-            output = self.ffn(b_hidden)# + bond_types.reshape(-1, 1)
+            output = self.ffn(b_hidden) + bond_types.reshape(-1, 1)
 
         return output
 

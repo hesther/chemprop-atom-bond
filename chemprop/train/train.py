@@ -48,9 +48,11 @@ def train(model: nn.Module,
     loss_sum, metric_sum, iter_count = [0]*(len(args.atom_targets) + len(args.bond_targets)), \
                                        [0]*(len(args.atom_targets) + len(args.bond_targets)), 0
 
-    num_iters = len(data) // args.batch_size * args.batch_size  # don't use the last batch if it's small, for stability
+    #num_iters = len(data) // args.batch_size * args.batch_size  # don't use the last batch if it's small, for stability
 
     iter_size = args.batch_size
+
+    num_iters = 1
 
     for i in trange(0, num_iters, iter_size):
         # Prepare batch
@@ -63,11 +65,12 @@ def train(model: nn.Module,
 
         # FIXME assign 0 to None in target
         # targets = [[0 if x is None else x for x in tb] for tb in target_batch]
+
+
         targets = [torch.Tensor(np.concatenate(x)) for x in zip(*target_batch)]
         if next(model.parameters()).is_cuda:
         #   mask, targets = mask.cuda(), targets.cuda()
             targets = [x.cuda() for x in targets]
-
         # FIXME
         #class_weights = torch.ones(targets.shape)
 
