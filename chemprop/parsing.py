@@ -144,6 +144,8 @@ def add_train_args(parser: ArgumentParser):
                         help='training bond targets')
     parser.add_argument('--bond_constraints', type=float, nargs='*',
                         help='training bond constraints')
+    parser.add_argument('--loss_weights', type=float, nargs='*',
+                        help='weights for multi-task loss')
 
     # Training arguments
     parser.add_argument('--epochs', type=int, default=30,
@@ -278,6 +280,11 @@ def modify_train_args(args: Namespace):
         args.atom_constraints = torch.Tensor(args.atom_constraints)
         if args.cuda:
             args.atom_constraints = args.atom_constraints.cuda()
+
+    if args.loss_weights is not None:
+        args.loss_weights = torch.Tensor(args.loss_weights)
+        if args.cuda:
+            args.loss_weights = args.loss_weights.cuda()
 
     if args.bond_constraints is not None:
         args.bond_constraints = torch.Tensor(args.bond_constraints)

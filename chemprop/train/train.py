@@ -48,6 +48,8 @@ def train(model: nn.Module,
     loss_sum, metric_sum, iter_count = [0]*(len(args.atom_targets) + len(args.bond_targets)), \
                                        [0]*(len(args.atom_targets) + len(args.bond_targets)), 0
 
+    loss_weights = args.loss_weights
+
     num_iters = len(data) // args.batch_size * args.batch_size  # don't use the last batch if it's small, for stability
 
     iter_size = args.batch_size
@@ -90,10 +92,10 @@ def train(model: nn.Module,
         '''
         loss_multi_task = []
         metric_multi_task = []
-        for target, pred in zip(targets, preds):
+        for target, pred, lw in zip(targets, preds, loss_weights):
             loss = loss_func(pred, target)
             loss = loss.sum() / target.shape[0]
-            loss_multi_task.append(loss)
+            loss_multi_task.append(loss * lw)
             if args.cuda:
                 metric = metric_func(pred.data.cpu().numpy(), target.data.cpu().numpy())
             else:
