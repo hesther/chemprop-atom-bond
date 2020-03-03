@@ -18,7 +18,8 @@ class MoleculeDatapoint:
                  line: pd.Series,
                  args: Namespace = None,
                  features: np.ndarray = None,
-                 use_compound_names: bool = False):
+                 use_compound_names: bool = False,
+                 pred: bool = False):
         """
         Initializes a MoleculeDatapoint, which contains a single molecule.
 
@@ -64,6 +65,10 @@ class MoleculeDatapoint:
             self.features = np.where(np.isnan(self.features), replace_token, self.features)
 
         line = line.drop('smiles')
+
+        if pred:
+            return
+
         # Create targets
         # atom targets
         self.atom_targets = line[args.atom_targets].values.tolist()
