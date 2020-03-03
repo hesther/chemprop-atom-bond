@@ -61,17 +61,19 @@ def make_predictions(args: Namespace, smiles: List[str] = None) -> List[Optional
     else:
         sum_preds = np.zeros((len(test_data), args.num_tasks))
     print(f'Predicting with an ensemble of {len(args.checkpoint_paths)} models')
-    for checkpoint_path in tqdm(args.checkpoint_paths, total=len(args.checkpoint_paths)):
+    #for checkpoint_path in tqdm(args.checkpoint_paths, total=len(args.checkpoint_paths)):
         # Load model
-        model = load_checkpoint(checkpoint_path, cuda=args.cuda)
-        model_preds = predict(
-            model=model,
-            data=test_data,
-            batch_size=args.batch_size,
-            scaler=scaler
-        )
-        sum_preds += np.array(model_preds)
+    model = load_checkpoint(checkpoint_path, cuda=args.cuda)
+    test_preds, test_smiles_batch = predict(
+        model=model,
+        data=test_data,
+        batch_size=args.batch_size,
+        scaler=scaler
+    )
 
+    return test_preds, test_smiles_batch
+
+    '''
     # Ensemble predictions
     avg_preds = sum_preds / len(args.checkpoint_paths)
     avg_preds = avg_preds.tolist()
@@ -129,3 +131,4 @@ def make_predictions(args: Namespace, smiles: List[str] = None) -> List[Optional
             writer.writerow(row)
 
     return avg_preds
+    '''
