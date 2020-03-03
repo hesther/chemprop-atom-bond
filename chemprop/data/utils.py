@@ -167,7 +167,8 @@ def get_data_from_smiles(smiles: List[str], skip_invalid_smiles: bool = True, lo
     """
     debug = logger.debug if logger is not None else print
 
-    data = MoleculeDataset([MoleculeDatapoint(line = [smile], args = args) for smile in smiles])
+    data = MoleculeDataset([MoleculeDatapoint(line=pd.Series([smile], index=['smiles']), args=args, pred=True)
+                            for smile in smiles])
 
     # Filter out invalid SMILES
     if skip_invalid_smiles:
