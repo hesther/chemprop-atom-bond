@@ -228,7 +228,7 @@ def modify_predict_args(args: Namespace):
     :param args: Arguments.
     """
     assert args.test_path
-    assert args.preds_path
+    #assert args.preds_path
     assert args.checkpoint_dir is not None or args.checkpoint_path is not None or args.checkpoint_paths is not None
 
     update_checkpoint_args(args)

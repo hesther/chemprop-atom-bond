@@ -8,7 +8,7 @@ import pandas as pd
 if __name__ == '__main__':
     args = parse_predict_args()
 
-    test_df = pd.read_csv(args.test_path, index_col=0)
+    test_df = pd.read_csv(args.preds_path, index_col=0)
     smiles = test_df.smiles.values
     test_preds, test_smiles = make_predictions(args, smiles=smiles)
 
