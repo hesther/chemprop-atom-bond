@@ -63,7 +63,7 @@ def make_predictions(args: Namespace, smiles: List[str] = None) -> List[Optional
     print(f'Predicting with an ensemble of {len(args.checkpoint_paths)} models')
     #for checkpoint_path in tqdm(args.checkpoint_paths, total=len(args.checkpoint_paths)):
         # Load model
-    model = load_checkpoint(checkpoint_path, cuda=args.cuda)
+    model = load_checkpoint(args.checkpoint_path, cuda=args.cuda)
     test_preds, test_smiles_batch = predict(
         model=model,
         data=test_data,
