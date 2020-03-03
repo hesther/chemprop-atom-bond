@@ -237,7 +237,7 @@ def modify_predict_args(args: Namespace):
     del args.no_cuda
 
     # Create directory for preds path
-    makedirs(args.preds_path, isfile=True)
+    #makedirs(args.preds_path, isfile=True)
 
 
 def parse_predict_args() -> Namespace:
