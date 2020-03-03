@@ -49,8 +49,9 @@ class MultiReadout(nn.Module):
             self.add_module(f'readout_{i}', FFN(features_size, hidden_size, num_layers,
                                                 output_size, dropout, activation, constraint, ffn_type='atom'))
 
+        i += 1
         for j, b_target in enumerate(bond_targets):
-            i += j + 1
+            i += j
             constraint = bond_constraints[i] if bond_constraints and j < len(bond_constraints) else None
             self.add_module(f'readout_{i}', FFN(features_size, hidden_size, num_layers,
                                                 output_size, dropout, activation, constraint, ffn_type='bond'))

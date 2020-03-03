@@ -140,7 +140,7 @@ def add_train_args(parser: ArgumentParser):
                         help='training atom targets')
     parser.add_argument('--atom_constraints', type=float, nargs='*', default=[0, 1, -1],
                         help='constraints applied to model output')
-    parser.add_argument('--bond_targets', type=str, nargs='*',
+    parser.add_argument('--bond_targets', type=str, nargs='+',
                         help='training bond targets')
     parser.add_argument('--bond_constraints', type=float, nargs='*',
                         help='training bond constraints')
