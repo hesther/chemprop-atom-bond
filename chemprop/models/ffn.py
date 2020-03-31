@@ -28,7 +28,7 @@ class MultiReadout(nn.Module):
     https://discuss.pytorch.org/t/list-of-nn-module-in-a-nn-module/219/3 """
 
     def __init__(self, args: Namespace, atom_targets, bond_targets=None,
-                 atom_constraints=None, bond_constraints=None):
+                 atom_constraints=None, bond_constraints=None, attention=False):
         """
 
         :param args:
@@ -46,8 +46,12 @@ class MultiReadout(nn.Module):
         super(MultiReadout, self).__init__()
         for i, a_target in enumerate(atom_targets):
             constraint = atom_constraints[i] if atom_constraints is not None and i < len(atom_constraints) else None
-            self.add_module(f'readout_{i}', FFN(features_size, hidden_size, num_layers,
-                                                output_size, dropout, activation, constraint, ffn_type='atom'))
+            if attention:
+                self.add_module(f'readout_{i}', FFNAtten(features_size, hidden_size, num_layers,
+                                                         output_size, dropout, activation, constraint, ffn_type='atom'))
+            else:
+                self.add_module(f'readout_{i}', FFN(features_size, hidden_size, num_layers,
+                                                    output_size, dropout, activation, constraint, ffn_type='atom'))
 
         i += 1
         for j, b_target in enumerate(bond_targets):
@@ -62,11 +66,66 @@ class MultiReadout(nn.Module):
         return [ffn(*input) for ffn in self.ffn_list]
 
 
+class FFNAtten(nn.Module):
+    def __init__(self, features_size, hidden_size, num_layers, output_size,
+                 dropout, activation, constraint=None, ffn_type='atom'):
+        """Initializes the FFN.
+
+        args: Arguments.
+        constraints: constraints applied to output
+        """
+
+        super(FFN, self).__init__()
+
+        self.ffn = DenseLayers(features_size, hidden_size,
+                               num_layers, hidden_size, dropout, activation)
+        self.ffn_readout = DenseLayers(hidden_size, hidden_size, 1, output_size, dropout, activation)
+
+
+        self.weights_readout = DenseLayers(first_linear_dim=hidden_size, output_size=output_size, num_layers=2,
+                                           dropout=dropout, activation=activation)
+        self.constraint = constraint
+
+    def forward(self, input):
+        """
+        Runs the FFN on input
+
+        :param input:
+        :return:
+        """
+        a_hidden, a_scope, b_hidden, b_scope, b2br, bond_types = input
+
+        hidden = a_hidden
+        scope = a_scope
+
+        output_hidden = self.ffn(hidden)
+        output = self.ffn_readout(output_hidden)
+
+        weights = self.weights_readout(output_hidden)
+        constrained_output = []
+        for i, (a_start, a_size) in enumerate(scope):
+            if a_size == 0:
+                continue
+            else:
+                cur_weights = weights.narrow(0, a_start, a_size)
+                cur_output = output.narrow(0, a_start, a_size)
+
+                cur_weights = torch.nn.Softmax()(cur_weights)
+
+                cur_output_sum = cur_output.sum()
+
+                cur_output = cur_output + cur_weights * (self.constraint - cur_output_sum)
+                constrained_output.append(cur_output)
+        output = torch.cat(constrained_output, dim=0)
+
+        return output
+
+
 class FFN(nn.Module):
     """A Feedforward netowrk reading out properties from fingerprint"""
 
     def __init__(self, features_size, hidden_size, num_layers, output_size,
-                 dropout, activation, constraint=None, ffn_type='atom'):
+                 dropout, activation, constraint=None, ffn_type='atom', attention=False):
         """Initializes the FFN.
 
         args: Arguments.
@@ -81,10 +140,14 @@ class FFN(nn.Module):
             self.ffn = DenseLayers(2*features_size, hidden_size,
                                    num_layers, output_size, dropout, activation)
         self.ffn_type = ffn_type
+        self.attention = attention
 
         if constraint is not None:
             self.weights_readout = DenseLayers(features_size, hidden_size,
                                                num_layers, output_size, dropout, activation)
+            if attention:
+                self.weights_readout = DenseLayers(first_linear_dim=hidden_size, output_size=1, num_layers=1,
+                                                   dropout=dropout, activation=activation)
             self.constraint = constraint
         else:
             self.constraint = None
@@ -103,6 +166,10 @@ class FFN(nn.Module):
             scope = a_scope
 
             output = self.ffn(hidden)
+            if self.attention:
+                weights = self.weights_readout(output)
+
+
             if self.constraint is not None:
                 weights = self.weights_readout(hidden)
                 constrained_output = []
