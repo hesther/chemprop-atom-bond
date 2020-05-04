@@ -8,6 +8,7 @@ from chemprop.train import make_predictions
 import pandas as pd
 from rdkit import Chem
 import numpy as np
+import time
 
 def num_atoms_bonds(smiles):
     m = Chem.MolFromSmiles(smiles)
@@ -21,7 +22,12 @@ if __name__ == '__main__':
 
     test_df = pd.read_csv(args.test_path, index_col=0)
     smiles = test_df.smiles.tolist()
+    
+    start = time.time()
     test_preds, test_smiles = make_predictions(args, smiles=smiles)
+    end = time.time()
+
+    print('time:{}s'.format(end-start))
 
     partial_charge = test_preds[0]
     partial_neu = test_preds[1]
@@ -44,11 +50,5 @@ if __name__ == '__main__':
     df = pd.DataFrame(
         {'smiles': smiles, 'partial_charge': partial_charge, 'partial_neu': partial_neu, 'partial_elec': partial_elec,
          'NMR': NMR, 'bond_order': bond_order, 'bond_distance': bond_distance})
-
-    with open(os.path.join(args.save_dir, 'preds.pickle'), 'wb') as preds:
-        pickle.dump(test_preds, preds)
-
-    with open(os.path.join(args.save_dir, 'preds_smiles.pickle'), 'wb') as smiles:
-        pickle.dump(test_smiles, smiles)
-
-    df.to_pickle(os.path.join(args.save_dir, 'predicts.pickle'))
+    
+    df.to_pickle(os.path.join(args.save_dir, 'substitution_all_reactants.pickle'))
