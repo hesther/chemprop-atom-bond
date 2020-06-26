@@ -51,4 +51,4 @@ if __name__ == '__main__':
         {'smiles': smiles, 'partial_charge': partial_charge, 'partial_neu': partial_neu, 'partial_elec': partial_elec,
          'NMR': NMR, 'bond_order': bond_order, 'bond_distance': bond_distance})
     
-    df.to_pickle(os.path.join(args.save_dir, 'substitution_all_reactants.pickle'))
+    df.to_pickle('test_selec_all.pickle')
