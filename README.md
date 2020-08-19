@@ -1,24 +1,16 @@
-# Molecular Property Prediction
-This repository contains message passing neural networks for molecular property prediction as described in the paper [Analyzing Learned Molecular Representations for Property Prediction](https://pubs.acs.org/doi/abs/10.1021/acs.jcim.9b00237).
+# ChemProp for atomic and bond property predictions
+This repository contains multitask constraint message passing neural networks for atomic/bond property predictions as described in the paper xxxxxxx. This network is modeled after ChemProp as described in the paper [Analyzing Learned Molecular Representations for Property Prediction](https://pubs.acs.org/doi/abs/10.1021/acs.jcim.9b00237).
 
 ## Table of Contents
 
 - [Requirements](#requirements)
 - [Installation](#installation)
   * [Option 1: Conda](#option-1-conda)
-  * [Option 2: Docker](#option-2-docker)
-  * [(Optional) Installing `chemprop` as a Package](#optional-installing-chemprop-as-a-package)
-  * [Notes](#notes)
-- [Web Interface](#web-interface)
 - [Data](#data)
 - [Training](#training)
   * [Train/Validation/Test Splits](#train-validation-test-splits)
   * [Cross validation](#cross-validation)
   * [Ensembling](#ensembling)
-  * [Hyperparameter Optimization](#hyperparameter-optimization)
-  * [Additional Features](#additional-features)
-    * [RDKit 2D Features](#rdkit-2d-features)
-    * [Custom Features](#custom-features)
 - [Predicting](#predicting)
 - [TensorBoard](#tensorboard)
 - [Results](#results)
@@ -45,50 +37,9 @@ The optional `descriptastorus` package is only necessary if you plan to incorpor
 
 Note that on machines with GPUs, you may need to manually install a GPU-enabled version of PyTorch by following the instructions [here](https://pytorch.org/get-started/locally/).
 
-### Option 2: Docker
-
-Docker provides a nice way to isolate the `chemprop` code and environment. To install and run our code in a Docker container, follow these steps:
-
-1. Install Docker from [https://docs.docker.com/install/](https://docs.docker.com/install/)
-2. `cd /path/to/chemprop`
-3. `docker build -t chemprop .`
-4. `docker run -it chemprop:latest /bin/bash`
-
-Note that you will need to run the latter command with nvidia-docker if you are on a GPU machine in order to be able to access the GPUs. 
-
-### (Optional) Installing `chemprop` as a Package
-
-If you would like to use functions or classes from `chemprop` in your own code, you can install `chemprop` as a pip package as follows:
-
-1. `cd /path/to/chemprop`
-2. `pip install -e .`
-
-Then you can use `import chemprop` or `from chemprop import ...` in your other code.
-
-### Notes
-
-**PyTorch GPU:** Although PyTorch is installed automatically along with `chemprop`, you may need to install the GPU version manually. Instructions are available [here](https://pytorch.org/get-started/locally/).
-
-**kyotocabinet**: If you get warning messages about `kyotocabinet` not being installed, it's safe to ignore them.
-   
-## Web Interface
-
-For those less familiar with the command line, we also have a web interface which allows for basic training and predicting. After installing the dependencies following the instructions above, you can start the web interface in two ways:
-
-1. Run `python web/run.py` and then navigate to [localhost:5000](http://localhost:5000) in a web browser. This will start the site in development mode.
-2. Run `gunicorn --bind {host}:{port} 'wsgi:build_app()'`. This will start the site in production mode.
-   * To run this server in the background, add the `--daemon` flag.
-   * Arguments including `init_db` and `demo` can be passed with this pattern: `'wsgi:build_app(init_db=True, demo=True)'` 
-   * Gunicorn documentation can be found [here](http://docs.gunicorn.org/en/stable/index.html).
-
-![Training with our web interface](web/app/static/images/web_train.png "Training with our web interface")
-
-![Predicting with our web interface](web/app/static/images/web_predict.png "Predicting with our web interface")
-
-
 ## Data
 
-In order to train a model, you must provide training data containing molecules (as SMILES strings) and known target values. Targets can either be real numbers, if performing regression, or binary (i.e. 0s and 1s), if performing classification. Target values which are unknown can be left as blanks.
+In order to train the model, you must provide training data containing molecules (as SMILES strings) and known target values. Targets can either be real numbers, if performing regression, or binary (i.e. 0s and 1s), if performing classification. Target values which are unknown can be left as blanks.
 
 Our model can either train on a single target ("single tasking") or on multiple targets simultaneously ("multi-tasking").
 
