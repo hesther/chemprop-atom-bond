@@ -73,20 +73,20 @@ class ReactivityDescriptorHandler(BaseHandler):
             n_atoms.append(len(m.GetAtoms()))
             n_bonds.append(len(m.GetBonds()))
 
-        partial_charge = np.split(partial_charge.flatten(), np.cumsum(np.array(n_atoms)))[:-1]
-        partial_neu = np.split(partial_neu.flatten(), np.cumsum(np.array(n_atoms)))[:-1]
-        partial_elec = np.split(partial_elec.flatten(), np.cumsum(np.array(n_atoms)))[:-1]
-        NMR = np.split(NMR.flatten(), np.cumsum(np.array(n_atoms)))[:-1]
+        partial_charge = [x.tolist() for x in np.split(partial_charge.flatten(), np.cumsum(np.array(n_atoms)))][:-1]
+        partial_neu = [x.tolist() for x in np.split(partial_neu.flatten(), np.cumsum(np.array(n_atoms)))][:-1]
+        partial_elec = [x.tolist() for x in np.split(partial_elec.flatten(), np.cumsum(np.array(n_atoms)))][:-1]
+        NMR = [x.tolist() for x in np.split(NMR.flatten(), np.cumsum(np.array(n_atoms)))][:-1]
 
-        bond_order = np.split(bond_order.flatten(), np.cumsum(np.array(n_bonds)))[:-1]
-        bond_distance = np.split(bond_distance.flatten(), np.cumsum(np.array(n_bonds)))[:-1]
+        bond_order = [x.tolist() for x in np.split(bond_order.flatten(), np.cumsum(np.array(n_bonds)))][:-1]
+        bond_distance = [x.tolist() for x in np.split(bond_distance.flatten(), np.cumsum(np.array(n_bonds)))][:-1]
 
-        df = pd.DataFrame(
-            {'smiles': smiles, 'partial_charge': partial_charge, 'partial_neu': partial_neu,
-             'partial_elec': partial_elec,
-             'NMR': NMR, 'bond_order': bond_order, 'bond_distance': bond_distance})
+        results = [{'smiles': s, 'partial_charge': pc, 'partial_neu': pn,
+                    'partial_elec': pe, 'NMR': nmr, 'bond_order': bo, 'bond_distance': bd}
+                   for s, pc, pn, pe, nmr, bo, bd in zip(smiles, partial_charge, partial_neu,
+                                                         partial_elec, NMR, bond_order, bond_distance)]
 
-        return df
+        return results
 
 _service = ReactivityDescriptorHandler()
 
