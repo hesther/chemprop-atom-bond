@@ -10,7 +10,6 @@ from featurization import mol2graph, get_atom_fdim, get_bond_fdim
 from rdkit import Chem
 
 import numpy as np
-import pandas as pd
 
 
 class ReactivityDescriptorHandler(BaseHandler):
@@ -25,7 +24,7 @@ class ReactivityDescriptorHandler(BaseHandler):
         model_dir = properties.get('model_dir')
         model_pt_path = os.path.join(model_dir, "QM_137k.pt")
 
-        from models import MoleculeModel
+        from model import MoleculeModel
 
         # Load model and args
         state = torch.load(model_pt_path, lambda storage, loc: storage)
@@ -98,7 +97,8 @@ def handle(data, context):
     if data is None:
         return None
 
-    if isinstance(data, list):
+    print(data)
+    if isinstance(data[0], str):
         smiles = data
     else:
         smiles = data[0].get('data') or data[0].get('body')
