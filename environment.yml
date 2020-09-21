@@ -18,3 +18,5 @@ dependencies:
   - tensorflow
   - tensorboardX
   - tqdm
+  - torchserve
+  - torch-model-archiver

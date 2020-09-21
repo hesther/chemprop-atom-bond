@@ -24,7 +24,7 @@ def add_predict_args(parser: ArgumentParser):
     parser.add_argument('--use_compound_names', action='store_true', default=False,
                         help='Use when test data file contains compound names in addition to SMILES strings')
     parser.add_argument('--preds_path', type=str,
-                        help='Path to CSV file where predictions will be saved')
+                        help='Path to pickle file where predictions will be saved')
     parser.add_argument('--checkpoint_dir', type=str,
                         help='Directory from which to load model checkpoints'
                              '(walks directory and ensembles all models that are found)')
@@ -228,7 +228,7 @@ def modify_predict_args(args: Namespace):
     :param args: Arguments.
     """
     assert args.test_path
-    #assert args.preds_path
+    assert args.preds_path
     assert args.checkpoint_dir is not None or args.checkpoint_path is not None or args.checkpoint_paths is not None
 
     update_checkpoint_args(args)
@@ -237,7 +237,7 @@ def modify_predict_args(args: Namespace):
     del args.no_cuda
 
     # Create directory for preds path
-    #makedirs(args.preds_path, isfile=True)
+    makedirs(args.preds_path, isfile=True)
 
 
 def parse_predict_args() -> Namespace:
