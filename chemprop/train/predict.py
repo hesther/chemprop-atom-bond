@@ -2,7 +2,6 @@ from typing import List
 
 import torch
 import torch.nn as nn
-from tqdm import trange
 import numpy as np
 
 from chemprop.data import MoleculeDataset, StandardScaler
